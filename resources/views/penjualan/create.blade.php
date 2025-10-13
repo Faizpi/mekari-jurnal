@@ -2,19 +2,14 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <p class="text-muted mb-0">Penjualan</p>
-            <h2 class="font-weight-bold">Buat Penagihan Penjualan</h2>
-        </div>
-        <div>
-            <h3 class="font-weight-bold text-right" id="grand-total-display">Total Rp0,00</h3>
-        </div>
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Buat Penagihan Penjualan</h1>
+        <h3 class="font-weight-bold text-right" id="grand-total-display">Total Rp0,00</h3>
     </div>
 
     <form action="{{ route('penjualan.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
-        <div class="card">
+        <div class="card shadow mb-4">
             <div class="card-body">
                 {{-- BAGIAN ATAS FORM --}}
                 <div class="row">
@@ -23,7 +18,8 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="pelanggan">Pelanggan *</label>
-                                    <select class="form-control" id="pelanggan" name="pelanggan" required></select>
+                                    {{-- DIUBAH MENJADI INPUT TEXT --}}
+                                    <input type="text" class="form-control" id="pelanggan" name="pelanggan" required placeholder="Ketik nama pelanggan...">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -53,7 +49,7 @@
                              <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="syarat_pembayaran">Syarat Pembayaran</label>
-                                    <select class="form-control" id="syarat_pembayaran" name="syarat_pembayaran"></select>
+                                    <input type="text" class="form-control" id="syarat_pembayaran" name="syarat_pembayaran">
                                 </div>
                             </div>
                         </div>
@@ -73,7 +69,7 @@
                         </div>
                         <div class="form-group">
                             <label for="gudang">Gudang</label>
-                            <select class="form-control" id="gudang" name="gudang"></select>
+                            <input type="text" class="form-control" id="gudang" name="gudang">
                         </div>
                     </div>
                 </div>
@@ -94,10 +90,11 @@
                         </thead>
                         <tbody id="product-table-body">
                             <tr>
-                                <td><select class="form-control" name="produk[]"><option>Pilih produk</option></select></td>
+                                {{-- DIUBAH MENJADI INPUT TEXT --}}
+                                <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
                                 <td><input type="text" class="form-control" name="deskripsi[]"></td>
                                 <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
-                                <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0"></td>
+                                <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0" required></td>
                                 <td><input type="number" class="form-control text-right product-discount" name="diskon[]" placeholder="0" min="0" max="100"></td>
                                 <td><input type="text" class="form-control text-right product-line-total" name="jumlah[]" placeholder="0" readonly></td>
                                 <td></td>
@@ -159,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const addRowBtn = document.getElementById('add-product-row');
     
     const formatRupiah = (angka) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 2 }).format(angka);
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
     };
 
     const calculateRow = (row) => {
@@ -167,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const price = parseFloat(row.querySelector('.product-price').value) || 0;
         const discount = parseFloat(row.querySelector('.product-discount').value) || 0;
         const total = quantity * price * (1 - (discount / 100));
-        row.querySelector('.product-line-total').value = total.toFixed(2);
+        row.querySelector('.product-line-total').value = total.toFixed(0);
         calculateGrandTotal();
     };
 
@@ -192,10 +189,10 @@ document.addEventListener('DOMContentLoaded', function () {
     addRowBtn.addEventListener('click', function () {
         const newRow = tableBody.insertRow();
         newRow.innerHTML = `
-            <td><select class="form-control" name="produk[]"><option>Pilih produk</option></select></td>
+            <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
             <td><input type="text" class="form-control" name="deskripsi[]"></td>
             <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
-            <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0"></td>
+            <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0" required></td>
             <td><input type="number" class="form-control text-right product-discount" name="diskon[]" placeholder="0" min="0" max="100"></td>
             <td><input type="text" class="form-control text-right product-line-total" name="jumlah[]" placeholder="0" readonly></td>
             <td><button type="button" class="btn btn-danger btn-sm remove-row-btn">X</button></td>

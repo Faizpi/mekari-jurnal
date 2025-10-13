@@ -2,16 +2,13 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <p class="text-muted mb-0">Pembelian</p>
-            <h2 class="font-weight-bold">Buat Permintaan Pembelian</h2>
-        </div>
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Buat Permintaan Pembelian</h1>
     </div>
 
     <form action="{{ route('pembelian.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
-        <div class="card">
+        <div class="card shadow mb-4">
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
@@ -23,19 +20,11 @@
                             <label for="tgl_transaksi">Tanggal Transaksi *</label>
                             <input type="date" class="form-control" name="tgl_transaksi" value="{{ date('Y-m-d') }}" required>
                         </div>
-                        <div class="form-group">
-                            <label for="no_transaksi">No Transaksi</label>
-                            <input type="text" class="form-control" name="no_transaksi" placeholder="[Auto]" disabled>
-                        </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="email_penyetuju">Email Penyetuju</label>
                             <input type="email" class="form-control" name="email_penyetuju">
-                        </div>
-                         <div class="form-group">
-                            <label for="tgl_jatuh_tempo">Tanggal Jatuh Tempo</label>
-                            <input type="date" class="form-control" name="tgl_jatuh_tempo">
                         </div>
                         <div class="form-group">
                             <label for="urgensi">Urgensi *</label>
@@ -61,7 +50,8 @@
                         </thead>
                         <tbody id="product-table-body">
                             <tr>
-                                <td><select class="form-control" name="produk[]"><option>Pilih produk</option></select></td>
+                                {{-- DIUBAH MENJADI INPUT TEXT --}}
+                                <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
                                 <td><input type="text" class="form-control" name="deskripsi[]"></td>
                                 <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
                                 <td><input type="text" class="form-control" name="unit[]"></td>
@@ -118,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function () {
     addRowBtn.addEventListener('click', function () {
         const newRow = tableBody.insertRow();
         newRow.innerHTML = `
-            <td><select class="form-control" name="produk[]"><option>Pilih produk</option></select></td>
+            <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
             <td><input type="text" class="form-control" name="deskripsi[]"></td>
             <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
             <td><input type="text" class="form-control" name="unit[]"></td>

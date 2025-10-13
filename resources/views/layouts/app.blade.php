@@ -91,7 +91,7 @@
             <footer class="sticky-footer bg-white">
                 <div class="container m-y-auto">
                     <div class="copyright text-center my-auto">
-                        <span>Copyright &copy; Your Website {{ date('Y') }}</span>
+                        <span>Copyright &copy; Mekari Jurnal {{ date('Y') }}</span>
                     </div>
                 </div>
             </footer>
