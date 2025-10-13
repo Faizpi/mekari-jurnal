@@ -108,13 +108,12 @@
                             <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
                                 <i class="fas fa-pen"></i>
                             </a>
-                            <form action="{{ route('penjualan.destroy', $item->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-circle btn-sm" onclick="return confirm('Yakin ingin menghapus data ini?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                    data-toggle="modal" 
+                                    data-target="#deleteModal" 
+                                    data-action="{{ route('penjualan.destroy', $item->id) }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                     @empty
@@ -127,5 +126,39 @@
         </div>
     </div>
 </div>
+{{-- Letakkan di bawah Card Tabel, sebelum @endsection --}}
 
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Anda Yakin?</h5>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">Pilih "Hapus" di bawah ini jika Anda yakin untuk menghapus data ini. Tindakan ini tidak bisa dibatalkan.</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
+                <form id="deleteForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); 
+        var action = button.data('action'); 
+
+        var modal = $(this);
+        modal.find('#deleteForm').attr('action', action);
+    });
+</script>
+@endpush

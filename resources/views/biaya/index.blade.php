@@ -104,13 +104,13 @@
                             <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
                                 <i class="fas fa-pen"></i>
                             </a>
-                            <form action="{{ route('biaya.destroy', $item->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-circle btn-sm" onclick="return confirm('Yakin ingin menghapus data ini?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            {{-- Tombol ini sekarang memicu modal --}}
+                            <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                    data-toggle="modal" 
+                                    data-target="#deleteModal" 
+                                    data-action="{{ route('biaya.destroy', $item->id) }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                     @empty
@@ -124,4 +124,43 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Anda Yakin?</h5>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">Pilih "Hapus" di bawah ini jika Anda yakin untuk menghapus data ini.</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
+                
+                {{-- Form ini akan diisi action-nya oleh JavaScript --}}
+                <form id="deleteForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
+
+@push('scripts')
+<script>
+    // Script ini menggunakan jQuery yang sudah ada dari template
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Tombol yang memicu modal
+        var action = button.data('action'); // Ambil URL dari atribut data-action
+
+        var modal = $(this);
+        // Set action form di dalam modal
+        modal.find('#deleteForm').attr('action', action);
+    });
+</script>
+@endpush

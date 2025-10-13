@@ -56,16 +56,21 @@
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Pembelian
-                            (Bulan Ini)</div>
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Pelunasan Diterima (30 Hari Terakhir)</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">{{ "0" }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-box-open fa-2x text-gray-300"></i>
+                        <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Daftar Permintaan Pembelian</h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -100,13 +105,12 @@
                             <a href="{{ route('pembelian.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
                                 <i class="fas fa-pen"></i>
                             </a>
-                            <form action="{{ route('pembelian.destroy', $item->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-circle btn-sm" onclick="return confirm('Yakin ingin menghapus data ini?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                    data-toggle="modal" 
+                                    data-target="#deleteModal" 
+                                    data-action="{{ route('pembelian.destroy', $item->id) }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                     @empty
@@ -119,4 +123,37 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Anda Yakin?</h5>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">Pilih "Hapus" di bawah ini jika Anda yakin untuk menghapus data ini.</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
+                <form id="deleteForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); 
+        var action = button.data('action'); 
+        var modal = $(this);
+        modal.find('#deleteForm').attr('action', action);
+    });
+</script>
+@endpush
