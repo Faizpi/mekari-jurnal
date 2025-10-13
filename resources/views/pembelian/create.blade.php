@@ -34,23 +34,29 @@
                                 <option value="Tinggi">Tinggi</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="tahun_anggaran">Tahun Anggaran</label>
+                            <input type="text" class="form-control" name="tahun_anggaran">
+                        </div>
+                        <div class="form-group">
+                            <label for="tag">Tag</label>
+                            <input type="text" class="form-control" name="tag">
+                        </div>
                     </div>
                 </div>
 
+                {{-- Tabel Produk --}}
                 <div class="table-responsive mt-3">
                     <table class="table table-bordered">
                         <thead class="thead-light">
                             <tr>
-                                <th style="width: 30%;">Produk</th>
-                                <th>Deskripsi</th>
-                                <th style="width: 15%;">Kuantitas</th>
-                                <th style="width: 15%;">Unit</th>
+                                <th style="width: 30%;">Produk</th><th>Deskripsi</th>
+                                <th style="width: 15%;">Kuantitas</th><th style="width: 15%;">Unit</th>
                                 <th style="width: 5%;"></th>
                             </tr>
                         </thead>
                         <tbody id="product-table-body">
                             <tr>
-                                {{-- DIUBAH MENJADI INPUT TEXT --}}
                                 <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
                                 <td><input type="text" class="form-control" name="deskripsi[]"></td>
                                 <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
@@ -64,10 +70,7 @@
 
                 <div class="row mt-3">
                     <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="memo">Memo</label>
-                            <textarea class="form-control" name="memo" rows="4"></textarea>
-                        </div>
+                        <div class="form-group"><label for="memo">Memo</label><textarea class="form-control" name="memo" rows="4"></textarea></div>
                     </div>
                     <div class="col-md-6 text-right">
                         <label>Total Barang</label>

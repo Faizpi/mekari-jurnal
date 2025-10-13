@@ -12,6 +12,8 @@ class Pembelian extends Model
         'tgl_transaksi',
         'tgl_jatuh_tempo',
         'urgensi',
+        'tahun_anggaran',
+        'tag', // Ditambahkan
         'memo',
         'total_barang',
         'status',

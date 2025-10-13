@@ -19,6 +19,7 @@ class Biaya extends Model
         'cara_pembayaran',
         'tag',
         'kategori',
+        'pajak',
         'memo',
         'total',
         'status',

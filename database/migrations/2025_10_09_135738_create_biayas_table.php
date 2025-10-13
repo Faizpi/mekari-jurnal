@@ -21,11 +21,13 @@ class CreateBiayasTable extends Migration
             $table->date('tgl_transaksi');
             $table->string('cara_pembayaran')->nullable();
             $table->string('tag')->nullable();
+            $table->string('pajak')->nullable(); // Ditambahkan
             $table->string('kategori')->nullable();
             $table->text('memo')->nullable();
             $table->decimal('total', 15, 2);
             $table->string('status')->default('Paid');
             $table->timestamps();
+
         });
     }
 

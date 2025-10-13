@@ -18,8 +18,8 @@ class PembelianController extends Controller
         // Kalkulasi untuk Kartu Ringkasan
         $fakturBelumDibayar = Pembelian::where('status', '!=', 'Lunas')->count();
         $fakturTelatBayar = Pembelian::where('tgl_jatuh_tempo', '<', Carbon::now())
-                                    ->where('status', '!=', 'Lunas')
-                                    ->count();
+            ->where('status', '!=', 'Lunas')
+            ->count();
 
         return view('pembelian.index', [
             'pembelians' => $allPembelian,
@@ -47,6 +47,8 @@ class PembelianController extends Controller
             'urgensi' => 'required|string',
             'produk' => 'required|array',
             'kuantitas' => 'required|array',
+            'tahun_anggaran' => 'nullable|string', // Ditambahkan
+            'tag' => 'nullable|string', // Ditambahkan
         ]);
 
         foreach ($request->produk as $index => $produk) {
@@ -56,6 +58,8 @@ class PembelianController extends Controller
                 'tgl_transaksi' => $request->tgl_transaksi,
                 'tgl_jatuh_tempo' => $request->tgl_jatuh_tempo,
                 'urgensi' => $request->urgensi,
+                'tahun_anggaran' => $request->tahun_anggaran,
+                'tag' => $request->tag,
                 'memo' => $request->memo,
                 'status' => 'Belum Ditagih',
                 'total_barang' => $request->kuantitas[$index],
