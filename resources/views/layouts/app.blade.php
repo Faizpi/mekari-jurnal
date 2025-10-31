@@ -12,7 +12,7 @@
 
     <link href="{{ asset('template/css/sb-admin-2.min.css') }}" rel="stylesheet">
 </head>
-<body id="page-top" class="{{ Request::is('login') || Request::is('register') ? 'bg-gradient-primary' : '' }}">
+    <body id="page-top" class="{{ Request::is('login') || Request::is('register') ? 'bg-gradient-primary' : '' }}">
 
     {{-- Jika user adalah tamu (belum login), tampilkan konten saja --}}
     @guest
@@ -55,6 +55,17 @@
                 <a class="nav-link" href="{{ route('biaya.index') }}">
                     <i class="fas fa-fw fa-receipt"></i><span>Biaya</span></a>
             </li>
+            {{-- PEMISAH UNTUK MENU ADMIN --}}
+            @if(auth()->user()->role == 'admin')
+                <hr class="sidebar-divider">
+                <div class="sidebar-heading">Admin</div>
+
+                {{-- TAMBAHKAN MENU INI --}}
+                <li class="nav-item {{ Route::is('users.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('users.index') }}">
+                        <i class="fas fa-fw fa-users-cog"></i><span>User Management</span></a>
+                </li>
+            @endif
 
             <hr class="sidebar-divider d-none d-md-block">
             <div class="text-center d-none d-md-inline">

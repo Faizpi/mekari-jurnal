@@ -42,6 +42,11 @@ Route::middleware(['auth'])->group(function () {
         return '<h1>Ini Halaman Pengaturan Admin</h1>';
     })->middleware('role:admin');
 
+    Route::middleware(['role:admin'])->group(function () {
+        // Rute ini akan menangani semua fungsionalitas user (index, create, store, edit, update, destroy)
+        Route::resource('users', 'UserController');
+    });
+
 });
 Auth::routes();
 
