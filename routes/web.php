@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BiayaController;      // <-- TAMBAHKAN INI
+use App\Http\Controllers\PenjualanController; // <-- TAMBAHKAN INI
+use App\Http\Controllers\PembelianController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +48,11 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         // Rute ini akan menangani semua fungsionalitas user (index, create, store, edit, update, destroy)
         Route::resource('users', 'UserController');
+        // --- TAMBAHKAN RUTE INI ---
+        // Rute untuk menyetujui data
+        Route::post('biaya/{biaya}/approve', [BiayaController::class, 'approve'])->name('biaya.approve');
+        Route::post('penjualan/{penjualan}/approve', [PenjualanController::class, 'approve'])->name('penjualan.approve');
+        Route::post('pembelian/{pembelian}/approve', [PembelianController::class, 'approve'])->name('pembelian.approve');
     });
 
 });

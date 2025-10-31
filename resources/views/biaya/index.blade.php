@@ -17,6 +17,14 @@
         </button>
     </div>
 @endif
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+@endif
 
 <div class="row">
     <div class="col-xl-4 col-md-6 mb-4">
@@ -81,11 +89,11 @@
                 <thead>
                     <tr>
                         <th>Tanggal</th>
-                        <th>No.</th>
+                        <th>Pembuat</th> {{-- KOLOM BARU --}}
                         <th>Kategori</th>
                         <th>Penerima</th>
-                        <th>Status</th>
                         <th class="text-right">Total</th>
+                        <th class="text-center">Status</th> {{-- KOLOM BARU --}}
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -93,29 +101,61 @@
                     @forelse ($biayas as $item)
                     <tr>
                         <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d/m/Y') }}</td>
-                        <td>EXP/{{ $item->id }}</td>
+                        <td>{{ $item->user->name }}</td> {{-- Tampilkan nama pembuat --}}
                         <td>{{ $item->kategori ?? '-' }}</td>
                         <td>{{ $item->penerima }}</td>
-                        <td>
-                            <span class="badge badge-success">{{ $item->status }}</span>
-                        </td>
                         <td class="text-right">Rp {{ number_format($item->total, 0, ',', '.') }}</td>
+                        {{-- Tampilkan Status dengan badge --}}
                         <td class="text-center">
-                            <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
-                                <i class="fas fa-pen"></i>
-                            </a>
-                            {{-- Tombol ini sekarang memicu modal --}}
-                            <button type="button" class="btn btn-danger btn-circle btn-sm" 
-                                    data-toggle="modal" 
-                                    data-target="#deleteModal" 
-                                    data-action="{{ route('biaya.destroy', $item->id) }}">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            @if($item->status == 'Approved')
+                                <span class="badge badge-success">{{ $item->status }}</span>
+                            @elseif($item->status == 'Pending')
+                                <span class="badge badge-warning">{{ $item->status }}</span>
+                            @else
+                                <span class="badge badge-danger">{{ $item->status }}</span>
+                            @endif
+                        </td>
+                        {{-- Logika Tombol Aksi --}}
+                        <td class="text-center">
+                            @if(auth()->user()->role == 'admin')
+                                {{-- Admin bisa Edit & Hapus kapan saja --}}
+                                <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                        data-toggle="modal" data-target="#deleteModal" data-action="{{ route('biaya.destroy', $item->id) }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                
+                                {{-- Tampilkan tombol Approve HANYA JIKA status masih Pending --}}
+                                @if($item->status == 'Pending')
+                                    <form action="{{ route('biaya.approve', $item->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                @endif
+
+                            @else
+                                {{-- User biasa hanya bisa Edit/Hapus jika status masih Pending --}}
+                                @if($item->status == 'Pending')
+                                    <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                            data-toggle="modal" data-target="#deleteModal" data-action="{{ route('biaya.destroy', $item->id) }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                @else
+                                    <span class="text-muted small">Terkunci</span>
+                                @endif
+                            @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center">Belum ada data biaya.</td>
+                        <td colspan="8" class="text-center">Belum ada data biaya.</td>
                     </tr>
                     @endforelse
                 </tbody>

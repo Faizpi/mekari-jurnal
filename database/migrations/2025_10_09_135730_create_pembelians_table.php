@@ -15,16 +15,24 @@ class CreatePembeliansTable extends Migration
     {
         Schema::create('pembelians', function (Blueprint $table) {
             $table->id();
+
+            // 1. Kolom baru untuk Foreign Key
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users');
+
             $table->string('staf_penyetuju');
             $table->string('email_penyetuju')->nullable();
             $table->date('tgl_transaksi');
             $table->date('tgl_jatuh_tempo')->nullable();
             $table->string('urgensi');
-            $table->string('tahun_anggaran')->nullable(); // Ditambahkan
-            $table->string('tag')->nullable(); // Ditambahkan
+            $table->string('tahun_anggaran')->nullable();
+            $table->string('tag')->nullable();
             $table->text('memo')->nullable();
             $table->integer('total_barang')->default(0);
-            $table->string('status')->default('Belum Ditagih');
+
+            // 2. Kolom baru untuk Status Persetujuan
+            $table->string('status')->default('Pending');
+
             $table->timestamps();
         });
     }

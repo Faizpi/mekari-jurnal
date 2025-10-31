@@ -11,25 +11,35 @@ class CreatePenjualansTable extends Migration
      *
      * @return void
      */
-    public function up()
-    {
-        Schema::create('penjualans', function (Blueprint $table) {
-            $table->id();
-            $table->string('pelanggan');
-            $table->string('email')->nullable();
-            $table->text('alamat_penagihan')->nullable();
-            $table->date('tgl_transaksi');
-            $table->date('tgl_jatuh_tempo')->nullable();
-            $table->string('syarat_pembayaran')->nullable();
-            $table->string('no_referensi')->nullable();
-            $table->string('tag')->nullable();
-            $table->string('gudang')->nullable();
-            $table->text('memo')->nullable();
-            $table->decimal('total', 15, 2);
-            $table->string('status')->default('Menunggu Pembayaran');
-            $table->timestamps();
-        });
-    }
+    // database/migrations/..._create_penjualans_table.php
+
+public function up()
+{
+    Schema::create('penjualans', function (Blueprint $table) {
+        $table->id();
+
+        // 1. Kolom baru untuk Foreign Key ke tabel users
+        $table->unsignedBigInteger('user_id'); 
+        $table->foreign('user_id')->references('id')->on('users');
+
+        $table->string('pelanggan');
+        $table->string('email')->nullable();
+        $table->text('alamat_penagihan')->nullable();
+        $table->date('tgl_transaksi');
+        $table->date('tgl_jatuh_tempo')->nullable();
+        $table->string('syarat_pembayaran')->nullable();
+        $table->string('no_referensi')->nullable();
+        $table->string('tag')->nullable();
+        $table->string('gudang')->nullable();
+        $table->text('memo')->nullable();
+        $table->decimal('total', 15, 2);
+
+        // 2. Kolom baru untuk Status Persetujuan
+        $table->string('status')->default('Pending'); 
+
+        $table->timestamps();
+    });
+}
     /**
      * Reverse the migrations.
      *
