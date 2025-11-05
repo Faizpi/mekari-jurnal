@@ -15,24 +15,20 @@ public function up()
 {
     Schema::create('biayas', function (Blueprint $table) {
         $table->id();
-
-        // 1. Kolom baru untuk Foreign Key
         $table->unsignedBigInteger('user_id');
         $table->foreign('user_id')->references('id')->on('users');
 
-        $table->string('bayar_dari');
+        // Info Utama
         $table->string('penerima')->nullable();
-        $table->text('alamat_penagihan')->nullable();
         $table->date('tgl_transaksi');
+        $table->string('bayar_dari');
         $table->string('cara_pembayaran')->nullable();
+        $table->text('alamat_penagihan')->nullable();
         $table->string('tag')->nullable();
-        $table->string('kategori')->nullable();
-        $table->string('pajak')->nullable();
         $table->text('memo')->nullable();
-        $table->decimal('total', 15, 2);
-
-        // 2. Kolom baru untuk Status Persetujuan
+        $table->string('lampiran_path')->nullable();
         $table->string('status')->default('Pending');
+        $table->decimal('grand_total', 15, 2); // Total akhir semua item
 
         $table->timestamps();
     });

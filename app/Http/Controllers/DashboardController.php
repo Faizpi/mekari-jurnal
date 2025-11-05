@@ -27,12 +27,10 @@ class DashboardController extends Controller
             // LOGIKA UNTUK ADMIN (MELIHAT SEMUA DATA)
             // ===================================
             
-            // 1. Ambil query dasar untuk semua data
             $penjualanQuery = Penjualan::query();
             $pembelianQuery = Pembelian::query();
             $biayaQuery = Biaya::query();
             
-            // 2. Kartu "Jumlah User Terdaftar"
             $data['card_4_title'] = 'Jumlah User Terdaftar';
             $data['card_4_value'] = User::count();
             $data['card_4_icon'] = 'fa-users';
@@ -43,15 +41,14 @@ class DashboardController extends Controller
             // ===================================
             $userId = Auth::id();
 
-            // 1. Ambil query dasar yang sudah difilter
             $penjualanQuery = Penjualan::where('user_id', $userId);
             $pembelianQuery = Pembelian::where('user_id', $userId);
             $biayaQuery = Biaya::where('user_id', $userId);
             
-            // 2. Kartu "Data Menunggu Persetujuan"
-            $pendingCount = $penjualanQuery->where('status', 'Pending')->count()
-                           + $pembelianQuery->where('status', 'Pending')->count()
-                           + $biayaQuery->where('status', 'Pending')->count();
+            // Clone query untuk kalkulasi 'Pending'
+            $pendingCount = (clone $penjualanQuery)->where('status', 'Pending')->count()
+                           + (clone $pembelianQuery)->where('status', 'Pending')->count()
+                           + (clone $biayaQuery)->where('status', 'Pending')->count();
 
             $data['card_4_title'] = 'Data Menunggu Persetujuan';
             $data['card_4_value'] = $pendingCount;
@@ -59,26 +56,26 @@ class DashboardController extends Controller
         }
 
         // ===================================
-        // KALKULASI BERSAMA (berdasarkan query di atas)
+        // KALKULASI BERSAMA (PERBAIKAN DI SINI)
         // ===================================
 
         // 3. Kartu Penjualan
-        $data['penjualanBulanIni'] = $penjualanQuery
+        $data['penjualanBulanIni'] = (clone $penjualanQuery)
             ->whereYear('tgl_transaksi', $now->year)
             ->whereMonth('tgl_transaksi', $now->month)
-            ->sum('total');
+            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
 
-        // 4. Kartu Pembelian
-        $data['pembelianBulanIni'] = $pembelianQuery
+        // 4. Kartu Pembelian (ini sudah benar, pakai count)
+        $data['pembelianBulanIni'] = (clone $pembelianQuery)
             ->whereYear('tgl_transaksi', $now->year)
             ->whereMonth('tgl_transaksi', $now->month)
             ->count();
 
         // 5. Kartu Biaya
-        $data['biayaBulanIni'] = $biayaQuery
+        $data['biayaBulanIni'] = (clone $biayaQuery)
             ->whereYear('tgl_transaksi', $now->year)
             ->whereMonth('tgl_transaksi', $now->month)
-            ->sum('total');
+            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
 
         // Kirim semua data ke view
         return view('dashboard', $data);

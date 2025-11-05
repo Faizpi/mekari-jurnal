@@ -6,16 +6,34 @@ use Illuminate\Database\Eloquent\Model;
 
 class Biaya extends Model
 {
-    // 1. Perbarui $fillable
+    // Perbarui $fillable agar sesuai dengan migrasi baru
     protected $fillable = [
-        'user_id', 'status', // <-- Tambahkan ini
-        'bayar_dari', 'penerima', 'alamat_penagihan', 'tgl_transaksi',
-        'cara_pembayaran', 'tag', 'kategori', 'pajak', 'memo', 'total',
+        'user_id',
+        'penerima',
+        'tgl_transaksi',
+        'bayar_dari',
+        'cara_pembayaran',
+        'alamat_penagihan',
+        'tag',
+        'memo',
+        'lampiran_path',
+        'status',
+        'grand_total',
     ];
 
-    // 2. Tambahkan relasi ke User
+    /**
+     * Relasi ke User (pembuat)
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relasi ke Rincian (Items)
+     */
+    public function items()
+    {
+        return $this->hasMany(BiayaItem::class);
     }
 }

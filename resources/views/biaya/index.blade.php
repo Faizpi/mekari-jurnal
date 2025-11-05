@@ -89,11 +89,11 @@
                 <thead>
                     <tr>
                         <th>Tanggal</th>
-                        <th>Pembuat</th> {{-- KOLOM BARU --}}
-                        <th>Kategori</th>
-                        <th>Penerima</th>
-                        <th class="text-right">Total</th>
-                        <th class="text-center">Status</th> {{-- KOLOM BARU --}}
+                        <th>Nomor</th>
+                        <th>Pembuat</th>
+                        <th>Penerima</th> {{-- Kategori diubah jadi Penerima --}}
+                        <th class="text-right">Grand Total</th> {{-- Total diubah jadi Grand Total --}}
+                        <th class="text-center">Status</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -101,11 +101,14 @@
                     @forelse ($biayas as $item)
                     <tr>
                         <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d/m/Y') }}</td>
-                        <td>{{ $item->user->name }}</td> {{-- Tampilkan nama pembuat --}}
-                        <td>{{ $item->kategori ?? '-' }}</td>
-                        <td>{{ $item->penerima }}</td>
-                        <td class="text-right">Rp {{ number_format($item->total, 0, ',', '.') }}</td>
-                        {{-- Tampilkan Status dengan badge --}}
+                        <td>
+                            <a href="{{ route('biaya.show', $item->id) }}">
+                                <strong>EXP-{{ $item->id }}</strong>
+                            </a>
+                        </td>
+                        <td>{{ $item->user->name }}</td>
+                        <td>{{ $item->penerima ?? '-' }}</td>
+                        <td class="text-right font-weight-bold">Rp {{ number_format($item->grand_total, 0, ',', '.') }}</td>
                         <td class="text-center">
                             @if($item->status == 'Approved')
                                 <span class="badge badge-success">{{ $item->status }}</span>
@@ -115,10 +118,9 @@
                                 <span class="badge badge-danger">{{ $item->status }}</span>
                             @endif
                         </td>
-                        {{-- Logika Tombol Aksi --}}
                         <td class="text-center">
-                            @if(auth()->user()->role == 'admin')
-                                {{-- Admin bisa Edit & Hapus kapan saja --}}
+                            {{-- (Logika tombol aksi tidak berubah) --}}
+                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
                                 <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
                                     <i class="fas fa-pen"></i>
                                 </a>
@@ -126,9 +128,7 @@
                                         data-toggle="modal" data-target="#deleteModal" data-action="{{ route('biaya.destroy', $item->id) }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                                
-                                {{-- Tampilkan tombol Approve HANYA JIKA status masih Pending --}}
-                                @if($item->status == 'Pending')
+                                @if(auth()->user()->role == 'admin' && $item->status == 'Pending')
                                     <form action="{{ route('biaya.approve', $item->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
@@ -136,20 +136,8 @@
                                         </button>
                                     </form>
                                 @endif
-
                             @else
-                                {{-- User biasa hanya bisa Edit/Hapus jika status masih Pending --}}
-                                @if($item->status == 'Pending')
-                                    <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
-                                        <i class="fas fa-pen"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-danger btn-circle btn-sm" 
-                                            data-toggle="modal" data-target="#deleteModal" data-action="{{ route('biaya.destroy', $item->id) }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                @else
-                                    <span class="text-muted small">Terkunci</span>
-                                @endif
+                                <span class="text-muted small">Terkunci</span>
                             @endif
                         </td>
                     </tr>

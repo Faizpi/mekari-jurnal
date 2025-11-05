@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Biaya;
-use App\User; // Pastikan namespace Model Anda benar
+use App\BiayaItem; // Pastikan ini ada
+use App\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 class BiayaController extends Controller
 {
@@ -15,23 +17,39 @@ class BiayaController extends Controller
      */
     public function index()
     {
-        $allBiaya = [];
-        
+        $query = null;
+
+        // Cek role user
         if (Auth::user()->role == 'admin') {
-            // Admin melihat semua data
-            $allBiaya = Biaya::with('user')->latest()->get(); // Muat relasi user
+            // Admin: ambil query dasar untuk semua data
+            $query = Biaya::with('user');
         } else {
-            // User biasa hanya melihat data milik sendiri
-            $allBiaya = Biaya::where('user_id', Auth::id())
-                              ->with('user')
-                              ->latest()
-                              ->get();
+            // User: ambil query dasar HANYA untuk data milik sendiri
+            $query = Biaya::where('user_id', Auth::id())->with('user');
         }
 
+        // =================================================================
+        // INI BAGIAN YANG DIPERBAIKI
+        // =================================================================
+        
         // Kalkulasi untuk Kartu Ringkasan
-        $totalBulanIni = $allBiaya->where('tgl_transaksi', '>=', Carbon::now()->startOfMonth())->sum('total');
-        $total30Hari = $allBiaya->where('tgl_transaksi', '>=', Carbon::now()->subDays(30))->sum('total');
-        $totalBelumDibayar = $allBiaya->whereIn('status', ['Pending', 'Rejected'])->sum('total');
+        $totalBulanIni = (clone $query) // Clone query agar tidak bentrok
+            ->whereYear('tgl_transaksi', Carbon::now()->year)
+            ->whereMonth('tgl_transaksi', Carbon::now()->month)
+            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
+
+        $total30Hari = (clone $query)
+            ->where('tgl_transaksi', '>=', Carbon::now()->subDays(30))
+            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
+
+        $totalBelumDibayar = (clone $query)
+            ->whereIn('status', ['Pending', 'Rejected'])
+            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
+
+        // =================================================================
+
+        // Ambil data untuk tabel, setelah semua kalkulasi selesai
+        $allBiaya = $query->latest()->get();
 
         return view('biaya.index', [
             'biayas' => $allBiaya,
@@ -54,53 +72,72 @@ class BiayaController extends Controller
      */
     public function store(Request $request)
     {
-        // =================================================================
-        // INI BAGIAN YANG DIPERBAIKI (VALIDASI LENGKAP)
-        // =================================================================
         $request->validate([
             'bayar_dari' => 'required|string',
             'tgl_transaksi' => 'required|date',
             'penerima' => 'nullable|string|max:255',
-            'alamat_penagihan' => 'nullable|string',
-            'cara_pembayaran' => 'nullable|string',
-            'tag' => 'nullable|string',
-            'memo' => 'nullable|string',
-            
-            // Validasi Array
             'kategori' => 'required|array',
-            'pajak' => 'required|array',
             'total' => 'required|array',
-            
-            // Validasi setiap item di dalam array
-            'kategori.*' => 'nullable|string|max:255',
-            'pajak.*' => 'required|numeric',
+            'kategori.*' => 'required|string|max:255',
             'total.*' => 'required|numeric|min:0',
+            'lampiran' => 'nullable|file|mimes:jpg,png,pdf,zip,doc,docx|max:2048',
         ]);
 
-        // Looping untuk menyimpan data
+        $path = null;
+        if ($request->hasFile('lampiran')) {
+            $path = $request->file('lampiran')->store('lampiran_biaya', 'public');
+        }
+
+        $grandTotal = 0;
+        foreach ($request->total as $index => $jumlah) {
+            $jumlah = $jumlah ?? 0;
+            $pajakRate = $request->pajak[$index] ?? 0;
+            $jumlahPajak = $jumlah * ($pajakRate / 100);
+            $totalAkhirBaris = $jumlah + $jumlahPajak;
+            $grandTotal += $totalAkhirBaris;
+        }
+
+        $biayaInduk = Biaya::create([
+            'user_id' => Auth::id(),
+            'status' => 'Pending',
+            'bayar_dari' => $request->bayar_dari,
+            'penerima' => $request->penerima,
+            'alamat_penagihan' => $request->alamat_penagihan,
+            'tgl_transaksi' => $request->tgl_transaksi,
+            'cara_pembayaran' => $request->cara_pembayaran,
+            'tag' => $request->tag,
+            'memo' => $request->memo,
+            'lampiran_path' => $path,
+            'grand_total' => $grandTotal,
+        ]);
+
         foreach ($request->kategori as $index => $kategori) {
             $jumlah = $request->total[$index] ?? 0;
             $pajakRate = $request->pajak[$index] ?? 0;
             $jumlahPajak = $jumlah * ($pajakRate / 100);
-            $totalAkhir = $jumlah + $jumlahPajak;
 
-            Biaya::create([
-                'user_id' => Auth::id(),
-                'status' => 'Pending',
-                'bayar_dari' => $request->bayar_dari,
-                'penerima' => $request->penerima,
-                'alamat_penagihan' => $request->alamat_penagihan,
-                'tgl_transaksi' => $request->tgl_transaksi,
-                'cara_pembayaran' => $request->cara_pembayaran,
-                'tag' => $request->tag,
-                'memo' => $request->memo,
+            BiayaItem::create([
+                'biaya_id' => $biayaInduk->id,
                 'kategori' => $kategori,
+                'deskripsi' => $request->deskripsi_akun[$index] ?? null,
                 'pajak' => $pajakRate > 0 ? "PPN 11%" : null,
-                'total' => $totalAkhir,
+                'jumlah' => $jumlah + $jumlahPajak,
             ]);
         }
 
-        return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil diajukan dan menunggu persetujuan.');
+        return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil diajukan.');
+    }
+
+    /**
+     * Menampilkan halaman detail untuk satu data biaya.
+     */
+    public function show(Biaya $biaya)
+    {
+        if (auth()->user()->role != 'admin' && $biaya->user_id != auth()->id()) {
+            return redirect()->route('biaya.index')->with('error', 'Akses ditolak.');
+        }
+        $biaya->load('items', 'user');
+        return view('biaya.show', compact('biaya'));
     }
 
     /**
@@ -108,11 +145,10 @@ class BiayaController extends Controller
      */
     public function edit(Biaya $biaya)
     {
-        // Tambahkan pengecekan keamanan: user biasa tidak bisa edit data orang lain
+        // (Logika edit perlu disesuaikan untuk memuat items, tapi kita fokus ke index dulu)
         if (Auth::user()->role != 'admin' && $biaya->user_id != Auth::id()) {
              return redirect()->route('biaya.index')->with('error', 'Anda tidak punya hak akses untuk mengedit data ini.');
         }
-
         return view('biaya.edit', compact('biaya'));
     }
 
@@ -121,22 +157,8 @@ class BiayaController extends Controller
      */
     public function update(Request $request, Biaya $biaya)
     {
-        // Pengecekan keamanan
-        if (Auth::user()->role != 'admin' && $biaya->user_id != Auth::id()) {
-             return redirect()->route('biaya.index')->with('error', 'Anda tidak punya hak akses untuk mengedit data ini.');
-        }
-
-        $request->validate([
-            'penerima' => 'required|string',
-            'tgl_transaksi' => 'required|date',
-            'total' => 'required|numeric',
-            'kategori' => 'nullable|string',
-            'status' => 'required|string', // Pastikan status juga dikirim dari form edit
-        ]);
-
-        $biaya->update($request->all());
-
-        return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil diperbarui.');
+        // (Logika update juga perlu disesuaikan)
+        // ...
     }
 
     /**
@@ -144,37 +166,26 @@ class BiayaController extends Controller
      */
     public function destroy(Biaya $biaya)
     {
-        // Pengecekan keamanan
         if (Auth::user()->role != 'admin' && $biaya->user_id != Auth::id()) {
              return redirect()->route('biaya.index')->with('error', 'Anda tidak punya hak akses untuk menghapus data ini.');
         }
         
+        // Karena kita set 'onDelete('cascade')' di migrasi,
+        // Menghapus induk (biaya) akan otomatis menghapus semua rincian (biaya_items).
         $biaya->delete();
         return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil dihapus.');
     }
 
+    /**
+     * Menyetujui data biaya (HANYA update status di DB lokal).
+     */
     public function approve(Biaya $biaya)
     {
-        // 1. Kirim data ke API Mekari Jurnal
-        // (Ini adalah CONTOH, URL dan data asli harus disesuaikan)
-        /*
-        $response = Http::withToken('YOUR_API_KEY')->post('https://api.mekari.com/v1/expenses', [
-            'tanggal' => $biaya->tgl_transaksi,
-            'kontak' => $biaya->penerima,
-            'total' => $biaya->total,
-            'kategori' => $biaya->kategori,
-        ]);
-
-        // 2. Cek jika pengiriman ke API gagal
-        if (!$response->successful()) {
-            return redirect()->route('biaya.index')->with('error', 'Gagal mengirim data ke API Jurnal.');
+        if (auth()->user()->role != 'admin') {
+             return redirect()->route('biaya.index')->with('error', 'Akses ditolak.');
         }
-        */
-
-        // 3. Jika berhasil (atau kita skip untuk dummy), update status di database LOKAL
         $biaya->status = 'Approved';
         $biaya->save();
-
-        return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil disetujui dan dikirim ke Jurnal.');
+        return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil disetujui.');
     }
 }

@@ -12,17 +12,13 @@
 @if (session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     </div>
 @endif
 @if (session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     </div>
 @endif
 
@@ -43,7 +39,6 @@
             </div>
         </div>
     </div>
-
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-danger shadow h-100 py-2">
             <div class="card-body">
@@ -60,7 +55,6 @@
             </div>
         </div>
     </div>
-
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
@@ -89,10 +83,10 @@
                 <thead>
                     <tr>
                         <th>Tanggal</th>
+                        <th>Nomor</th>
                         <th>Pembuat</th>
                         <th>Pelanggan</th>
-                        <th>Tgl. Jatuh Tempo</th>
-                        <th class="text-right">Total</th>
+                        <th class="text-right">Grand Total</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Aksi</th>
                     </tr>
@@ -101,10 +95,14 @@
                     @forelse ($penjualans as $item)
                     <tr>
                         <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d/m/Y') }}</td>
+                        <td>
+                            <a href="{{ route('penjualan.show', $item->id) }}">
+                                <strong>INV-{{ $item->id }}</strong>
+                            </a>
+                        </td>
                         <td>{{ $item->user->name }}</td>
                         <td>{{ $item->pelanggan }}</td>
-                        <td>{{ $item->tgl_jatuh_tempo ? \Carbon\Carbon::parse($item->tgl_jatuh_tempo)->format('d/m/Y') : '-' }}</td>
-                        <td class="text-right">Rp {{ number_format($item->total, 0, ',', '.') }}</td>
+                        <td class="text-right font-weight-bold">Rp {{ number_format($item->grand_total, 0, ',', '.') }}</td>
                         <td class="text-center">
                             @if($item->status == 'Approved')
                                 <span class="badge badge-success">{{ $item->status }}</span>
@@ -115,7 +113,7 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            @if(auth()->user()->role == 'admin')
+                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
                                 <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
                                     <i class="fas fa-pen"></i>
                                 </a>
@@ -123,8 +121,7 @@
                                         data-toggle="modal" data-target="#deleteModal" data-action="{{ route('penjualan.destroy', $item->id) }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                                
-                                @if($item->status == 'Pending')
+                                @if(auth()->user()->role == 'admin' && $item->status == 'Pending')
                                     <form action="{{ route('penjualan.approve', $item->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
@@ -133,17 +130,7 @@
                                     </form>
                                 @endif
                             @else
-                                @if($item->status == 'Pending')
-                                    <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
-                                        <i class="fas fa-pen"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-danger btn-circle btn-sm" 
-                                            data-toggle="modal" data-target="#deleteModal" data-action="{{ route('penjualan.destroy', $item->id) }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                @else
-                                    <span class="text-muted small">Terkunci</span>
-                                @endif
+                                <span class="text-muted small">Terkunci</span>
                             @endif
                         </td>
                     </tr>
@@ -157,18 +144,12 @@
         </div>
     </div>
 </div>
-{{-- Letakkan di bawah Card Tabel, sebelum @endsection --}}
 
 <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Anda Yakin?</h5>
-                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
-            </div>
-            <div class="modal-body">Pilih "Hapus" di bawah ini jika Anda yakin untuk menghapus data ini. Tindakan ini tidak bisa dibatalkan.</div>
+            <div class="modal-header"><h5 class="modal-title">Anda Yakin?</h5><button class="close" type="button" data-dismiss="modal"><span aria-hidden="true">×</span></button></div>
+            <div class="modal-body">Pilih "Hapus" di bawah ini jika Anda yakin untuk menghapus data ini.</div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
                 <form id="deleteForm" method="POST">
@@ -187,7 +168,6 @@
     $('#deleteModal').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget); 
         var action = button.data('action'); 
-
         var modal = $(this);
         modal.find('#deleteForm').attr('action', action);
     });

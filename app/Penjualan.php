@@ -6,17 +6,37 @@ use Illuminate\Database\Eloquent\Model;
 
 class Penjualan extends Model
 {
-    // 1. Perbarui $fillable
+    // Sesuaikan $fillable dengan migrasi 'induk' yang baru
     protected $fillable = [
-        'user_id', 'status', // <-- Tambahkan ini
-        'pelanggan', 'email', 'alamat_penagihan', 'tgl_transaksi',
-        'tgl_jatuh_tempo', 'syarat_pembayaran', 'no_referensi',
-        'tag', 'gudang', 'memo', 'total',
+        'user_id',
+        'pelanggan',
+        'email',
+        'alamat_penagihan',
+        'tgl_transaksi',
+        'tgl_jatuh_tempo',
+        'syarat_pembayaran',
+        'no_referensi',
+        'tag',
+        'gudang',
+        'memo',
+        'lampiran_path',
+        'status',
+        'grand_total',
     ];
 
-    // 2. Tambahkan relasi ke User
+    /**
+     * Relasi ke User (pembuat)
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relasi ke Rincian (Items)
+     */
+    public function items()
+    {
+        return $this->hasMany(PenjualanItem::class);
     }
 }

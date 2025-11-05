@@ -7,18 +7,22 @@
         <h3 class="font-weight-bold text-right" id="grand-total-display">Total Rp0,00</h3>
     </div>
 
-    <form action="{{ route('biaya.store') }}" method="POST">
+    <form action="{{ route('biaya.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="card shadow mb-4">
             <div class="card-body">
+                {{-- BAGIAN ATAS --}}
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="bayar_dari">Bayar Dari *</label>
-                            <select class="form-control" name="bayar_dari" required>
-                                <option value="Kas (1-10001)">Kas (1-10001)</option>
-                                <option value="Bank (1-10002)">Bank (1-10002)</option>
+                            <select class="form-control @error('bayar_dari') is-invalid @enderror" name="bayar_dari" required>
+                                <option value="Kas (1-10001)" {{ old('bayar_dari') == 'Kas (1-10001)' ? 'selected' : '' }}>Kas (1-10001)</option>
+                                <option value="Bank (1-10002)" {{ old('bayar_dari') == 'Bank (1-10002)' ? 'selected' : '' }}>Bank (1-10002)</option>
                             </select>
+                            @error('bayar_dari')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="col-md-8 pt-4">
@@ -29,15 +33,22 @@
                     </div>
                 </div>
                 <hr>
+                {{-- DETAIL BIAYA --}}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="penerima">Penerima</label>
-                            <input type="text" class="form-control" id="penerima" name="penerima">
+                            <input type="text" class="form-control @error('penerima') is-invalid @enderror" id="penerima" name="penerima" value="{{ old('penerima') }}">
+                            @error('penerima')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                          <div class="form-group">
                             <label for="alamat_penagihan">Alamat Penagihan</label>
-                            <textarea class="form-control" name="alamat_penagihan" rows="2"></textarea>
+                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
+                            @error('alamat_penagihan')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -45,16 +56,22 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="tgl_transaksi">Tgl Transaksi *</label>
-                                    <input type="date" class="form-control" id="tgl_transaksi" name="tgl_transaksi" value="{{ date('Y-m-d') }}" required>
+                                    <input type="date" class="form-control @error('tgl_transaksi') is-invalid @enderror" id="tgl_transaksi" name="tgl_transaksi" value="{{ old('tgl_transaksi', date('Y-m-d')) }}" required>
+                                    @error('tgl_transaksi')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="cara_pembayaran">Cara Pembayaran</label>
-                                    <select class="form-control" name="cara_pembayaran">
-                                        <option value="Tunai">Tunai</option>
-                                        <option value="Transfer Bank">Transfer Bank</option>
+                                    <select class="form-control @error('cara_pembayaran') is-invalid @enderror" name="cara_pembayaran">
+                                        <option value="Tunai" {{ old('cara_pembayaran') == 'Tunai' ? 'selected' : '' }}>Tunai</option>
+                                        <option value="Transfer Bank" {{ old('cara_pembayaran') == 'Transfer Bank' ? 'selected' : '' }}>Transfer Bank</option>
                                     </select>
+                                    @error('cara_pembayaran')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
@@ -68,13 +85,17 @@
                              <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="tag">Tag</label>
-                                    <input type="text" class="form-control" id="tag" name="tag">
+                                    <input type="text" class="form-control @error('tag') is-invalid @enderror" id="tag" name="tag" value="{{ old('tag') }}">
+                                    @error('tag')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                {{-- TABEL AKUN BIAYA --}}
                 <div class="table-responsive mt-3">
                     <table class="table table-bordered">
                         <thead class="thead-light">
@@ -87,28 +108,71 @@
                             </tr>
                         </thead>
                         <tbody id="expense-table-body">
-                            <tr>
-                                <td><input type="text" class="form-control" name="kategori[]" placeholder="Contoh: Biaya Kantor"></td>
-                                <td><input type="text" class="form-control" name="deskripsi_akun[]"></td>
-                                <td>
-                                    <select class="form-control expense-tax" name="pajak[]">
-                                        <option value="0">Tidak Ada Pajak</option>
-                                        <option value="11">PPN (11%)</option>
-                                    </select>
-                                </td>
-                                <td><input type="number" class="form-control text-right expense-amount" name="total[]" placeholder="0" required></td>
-                                <td></td>
-                            </tr>
+                            {{-- Tampilkan baris lama jika ada error validasi --}}
+                            @if(old('kategori'))
+                                @foreach(old('kategori') as $index => $oldKategori)
+                                    <tr>
+                                        <td><input type="text" class="form-control" name="kategori[]" value="{{ $oldKategori }}" placeholder="Contoh: Biaya Kantor"></td>
+                                        <td><input type="text" class="form-control" name="deskripsi_akun[]" value="{{ old('deskripsi_akun.'.$index) }}"></td>
+                                        <td>
+                                            <select class="form-control expense-tax" name="pajak[]">
+                                                <option value="0" {{ old('pajak.'.$index) == 0 ? 'selected' : '' }}>Tidak Ada Pajak</option>
+                                                <option value="11" {{ old('pajak.'.$index) == 11 ? 'selected' : '' }}>PPN (11%)</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="number" class="form-control text-right expense-amount" name="total[]" value="{{ old('total.'.$index) }}" placeholder="0" required></td>
+                                        <td>
+                                            @if($index > 0)
+                                                <button type="button" class="btn btn-danger btn-sm remove-row-btn">X</button>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @else
+                                {{-- Baris default jika tidak ada error --}}
+                                <tr>
+                                    <td><input type="text" class="form-control" name="kategori[]" placeholder="Contoh: Biaya Kantor"></td>
+                                    <td><input type="text" class="form-control" name="deskripsi_akun[]"></td>
+                                    <td>
+                                        <select class="form-control expense-tax" name="pajak[]">
+                                            <option value="0">Tidak Ada Pajak</option>
+                                            <option value="11">PPN (11%)</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="number" class="form-control text-right expense-amount" name="total[]" placeholder="0" required></td>
+                                    <td></td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
                 <button type="button" class="btn btn-dark btn-sm" id="add-row-btn">+ Tambah Data</button>
+                
+                {{-- Pesan Error untuk Validasi Array --}}
+                @error('kategori') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
+                @error('kategori.*') <div class="text-danger small mt-2">Error di baris Kategori: {{ $message }}</div> @enderror
+                @error('pajak.*') <div class="text-danger small mt-2">Error di baris Pajak: {{ $message }}</div> @enderror
+                @error('total.*') <div class="text-danger small mt-2">Error di baris Jumlah: {{ $message }}</div> @enderror
 
+                {{-- BAGIAN BAWAH --}}
                 <div class="row mt-3">
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="memo">Memo</label>
-                            <textarea class="form-control" id="memo" name="memo" rows="2"></textarea>
+                            <textarea class="form-control @error('memo') is-invalid @enderror" id="memo" name="memo" rows="2">{{ old('memo') }}</textarea>
+                            @error('memo')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="form-group">
+                            <label for="lampiran">Lampiran</label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input @error('lampiran') is-invalid @enderror" id="lampiran" name="lampiran">
+                                <label class="custom-file-label" for="lampiran">Pilih file...</label>
+                            </div>
+                            @error('lampiran')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -186,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td><input type="number" class="form-control text-right expense-amount" name="total[]" placeholder="0" required></td>
             <td><button type="button" class="btn btn-danger btn-sm remove-row-btn">X</button></td>
         `;
-        calculateTotalExpense();
+        calculateTotalExpense(); // Hitung ulang saat baris baru ditambahkan
     });
 
     tableBody.addEventListener('click', function (event) {
@@ -196,7 +260,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     
+    // Hitung total saat halaman dimuat (untuk data 'old' jika ada)
     calculateTotalExpense();
+
+    // Script untuk menampilkan nama file di input
+    document.querySelectorAll('.custom-file-input').forEach(input => {
+        input.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                var fileName = e.target.files[0].name;
+                var nextSibling = e.target.nextElementSibling;
+                nextSibling.innerText = fileName;
+            }
+        });
+    });
 });
 </script>
 @endpush
