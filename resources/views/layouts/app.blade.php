@@ -31,7 +31,7 @@
                     {{-- Ganti ikon dengan tag gambar ini --}}
                     <img src="{{ asset('assets/img/mekarilogo.png') }}" alt="Logo" style="height: 34px;">
                 </div>
-                <div class="sidebar-brand-text mx-3">Mekari Jurnal</div>
+                <!-- <div class="sidebar-brand-text mx-3">Mekari Jurnal</div> -->
             </a>
             <hr class="sidebar-divider my-0">
 

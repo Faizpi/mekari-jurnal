@@ -24,6 +24,11 @@ class Penjualan extends Model
         'grand_total',
     ];
 
+    protected $casts = [
+        'tgl_transaksi' => 'date',
+        'tgl_jatuh_tempo' => 'date',
+    ];
+
     /**
      * Relasi ke User (pembuat)
      */

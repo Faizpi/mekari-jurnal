@@ -22,6 +22,11 @@ class Pembelian extends Model
         // 'total_barang' sudah dihapus dari $fillable karena pindah ke 'items'
     ];
 
+    protected $casts = [
+        'tgl_transaksi' => 'date',
+        'tgl_jatuh_tempo' => 'date',
+    ];
+
     /**
      * Relasi ke User (pembuat)
      */

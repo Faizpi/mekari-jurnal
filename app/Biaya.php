@@ -21,6 +21,10 @@ class Biaya extends Model
         'grand_total',
     ];
 
+    protected $casts = [
+        'tgl_transaksi' => 'date',
+    ];
+
     /**
      * Relasi ke User (pembuat)
      */

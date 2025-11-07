@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Penjualan;  // Pastikan namespace Model Anda benar (App\ atau App\Models\)
+use App\Penjualan;
 use App\Pembelian;
 use App\Biaya;
 use App\User;
@@ -14,8 +14,6 @@ class DashboardController extends Controller
 {
     /**
      * Menampilkan halaman dashboard aplikasi beserta data ringkasan.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
      */
     public function index()
     {
@@ -24,28 +22,58 @@ class DashboardController extends Controller
 
         if (Auth::user()->role == 'admin') {
             // ===================================
-            // LOGIKA UNTUK ADMIN (MELIHAT SEMUA DATA)
+            // LOGIKA UNTUK ADMIN
             // ===================================
             
+            // 1. Query dasar untuk SEMUA data
             $penjualanQuery = Penjualan::query();
             $pembelianQuery = Pembelian::query();
             $biayaQuery = Biaya::query();
             
+            // 2. Kartu "Jumlah User"
             $data['card_4_title'] = 'Jumlah User Terdaftar';
             $data['card_4_value'] = User::count();
             $data['card_4_icon'] = 'fa-users';
 
+            // 3. Mengambil SEMUA data untuk Master Table
+            $penjualans = Penjualan::with('user')->get();
+            $pembelians = Pembelian::with('user')->get();
+            $biayas = Biaya::with('user')->get();
+
+            // 4. Menyiapkan data untuk digabung (tambahkan tipe agar bisa dibedakan)
+            $penjualans->each(function($item) { 
+                $item->type = 'Penjualan'; 
+                $item->route = route('penjualan.show', $item->id);
+                $item->number = 'INV-' . $item->id;
+            });
+            $pembelians->each(function($item) { 
+                $item->type = 'Pembelian'; 
+                $item->route = route('pembelian.show', $item->id);
+                $item->number = 'PR-' . $item->id;
+            });
+            $biayas->each(function($item) { 
+                $item->type = 'Biaya'; 
+                $item->route = route('biaya.show', $item->id);
+                $item->number = 'EXP-' . $item->id;
+            });
+
+            // 5. Gabungkan dan urutkan berdasarkan tanggal dibuat
+            $allTransactions = $penjualans->concat($pembelians)->concat($biayas);
+            $data['allTransactions'] = $allTransactions->sortByDesc('created_at');
+
+
         } else {
             // ===================================
-            // LOGIKA UNTUK USER BIASA (MELIHAT DATA SENDIRI)
+            // LOGIKA UNTUK USER BIASA
             // ===================================
             $userId = Auth::id();
 
+            // 1. Query dasar HANYA data milik user
             $penjualanQuery = Penjualan::where('user_id', $userId);
             $pembelianQuery = Pembelian::where('user_id', $userId);
             $biayaQuery = Biaya::where('user_id', $userId);
             
-            // Clone query untuk kalkulasi 'Pending'
+            // 2. Kartu "Data Pending"
             $pendingCount = (clone $penjualanQuery)->where('status', 'Pending')->count()
                            + (clone $pembelianQuery)->where('status', 'Pending')->count()
                            + (clone $biayaQuery)->where('status', 'Pending')->count();
@@ -56,26 +84,22 @@ class DashboardController extends Controller
         }
 
         // ===================================
-        // KALKULASI BERSAMA (PERBAIKAN DI SINI)
+        // KALKULASI KARTU RINGKASAN BERSAMA
         // ===================================
-
-        // 3. Kartu Penjualan
         $data['penjualanBulanIni'] = (clone $penjualanQuery)
             ->whereYear('tgl_transaksi', $now->year)
             ->whereMonth('tgl_transaksi', $now->month)
-            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
+            ->sum('grand_total');
 
-        // 4. Kartu Pembelian (ini sudah benar, pakai count)
         $data['pembelianBulanIni'] = (clone $pembelianQuery)
             ->whereYear('tgl_transaksi', $now->year)
             ->whereMonth('tgl_transaksi', $now->month)
             ->count();
 
-        // 5. Kartu Biaya
         $data['biayaBulanIni'] = (clone $biayaQuery)
             ->whereYear('tgl_transaksi', $now->year)
             ->whereMonth('tgl_transaksi', $now->month)
-            ->sum('grand_total'); // <-- DIUBAH DARI 'total'
+            ->sum('grand_total');
 
         // Kirim semua data ke view
         return view('dashboard', $data);
