@@ -216,4 +216,15 @@ class PenjualanController extends Controller
         $penjualan->save();
         return redirect()->route('penjualan.index')->with('success', 'Data penjualan berhasil disetujui.');
     }
+
+    public function print(Penjualan $penjualan)
+    {
+        // Keamanan
+        if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
+            return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+        }
+
+        $penjualan->load('items', 'user');
+        return view('penjualan.print', compact('penjualan'));
+    }
 }

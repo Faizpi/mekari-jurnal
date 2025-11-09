@@ -5,9 +5,15 @@
 
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Detail Penjualan #INV-{{ $penjualan->id }}</h1>
-        <a href="{{ route('penjualan.index') }}" class="btn btn-secondary btn-sm shadow-sm">
-            <i class="fas fa-arrow-left fa-sm"></i> Kembali ke Daftar
-        </a>
+        <div>
+            {{-- TAMBAHKAN TOMBOL INI --}}
+            <a href="{{ route('penjualan.print', $penjualan->id) }}" target="_blank" class="btn btn-primary btn-sm shadow-sm">
+                <i class="fas fa-print fa-sm"></i> Cetak Struk
+            </a>
+            <a href="{{ route('penjualan.index') }}" class="btn btn-secondary btn-sm shadow-sm">
+                <i class="fas fa-arrow-left fa-sm"></i> Kembali
+            </a>
+        </div>
     </div>
 
     <div class="card shadow mb-4">

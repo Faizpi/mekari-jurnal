@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Struk Biaya #{{ $biaya->id }}</title>
+    <title>Struk Penjualan #{{ $penjualan->id }}</title>
     <style>
         @page { size: 58mm; margin: 0; }
         @media screen {
@@ -13,12 +13,13 @@
                 background: #fff; 
             }
         }
+        
         body {
-            width: 56mm;
+            width: 56mm; /* aman dari keluar garis (2mm margin kiri-kanan) */
             margin: 1.5rem auto !important;;
             padding: 0;
             font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 9pt;
+            font-size: 9.5pt;
             color: #000;
         }
         .container {
@@ -42,6 +43,8 @@
             border-top: 1px dashed #000;
             margin: 5px 0;
         }
+        
+        /* Info Utama */
         .info-table {
             width: 100%;
             font-size: 8.5pt;
@@ -54,46 +57,55 @@
         .info-table td:first-child {
             width: 36%;
         }
-        
+
         /* ====================================================== */
-        /* PERUBAHAN TATA LETAK TABEL ITEM */
+        /* PERUBAHAN UTAMA: TATA LETAK TABEL ITEM */
         /* ====================================================== */
         .item-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
-            font-size: 9pt;
         }
+        
         /* Sembunyikan header tabel */
         .item-table thead {
             display: none;
         }
-        /* Atur padding untuk setiap sel */
+
+        /* Setiap item sekarang adalah satu sel besar */
         .item-table td {
+            vertical-align: top;
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee; /* Pemisah antar item */
+        }
+        
+        .item-name {
+            font-weight: bold;
+            word-wrap: break-word;
+            line-height: 1.2em;
+        }
+
+        /* Tabel Rincian (Label Kiri, Value Kanan) */
+        .receipt-details-table {
+            width: 100%;
+            margin-top: 3px;
+            border-collapse: collapse;
+            font-size: 9pt; /* Ukuran font rincian */
+        }
+        .receipt-details-table td {
             padding: 1.5px 0;
             vertical-align: top;
+            border: none; /* Hapus border di dalam */
         }
-        .item-table .label {
+        .receipt-details-table .label {
             width: 40%;
             text-align: left;
-            padding-left: 2mm; /* Menjorok sedikit */
         }
-        .item-table .value {
+        .receipt-details-table .value {
             width: 60%;
             text-align: right;
-            padding-right: 1mm;
+            padding-right: 1mm; /* Bantalan agar tidak mepet */
             white-space: nowrap;
-        }
-        /* Style untuk nama item/kategori */
-        .item-table .item-name {
-            font-weight: bold;
-            padding-top: 5px; /* Beri jarak antar item */
-            padding-left: 0;
-        }
-        /* Style untuk baris terakhir item */
-        .item-table tr.item-last-row td {
-            padding-bottom: 5px;
-            border-bottom: 1px dashed #eee;
         }
         /* ====================================================== */
         
@@ -110,7 +122,7 @@
         .text-right {
             text-align: right;
             white-space: nowrap;
-            padding-right: 1mm;
+            padding-right: 1mm; /* Bantalan agar tidak mepet */
         }
         .grand-total {
             font-size: 11pt;
@@ -120,7 +132,7 @@
             padding-top: 3px;
             padding-bottom: 3px;
         }
-        
+
         /* FOOTER */
         .footer {
             text-align: center;
@@ -138,15 +150,15 @@
     <div class="container">
         <div class="header">
             <p class="company-name">PT Giyats Automobile</p>
-            <p class="title">BUKTI BIAYA</p>
+            <p class="title">INVOICE PENJUALAN</p>
         </div>
 
         <table class="info-table">
-            <tr><td>Nomor</td><td>: EXP-{{ $biaya->id }}</td></tr>
-            <tr><td>Tanggal</td><td>: {{ $biaya->created_at->format('d/m/Y H:i') }}</td></tr>
-            <tr><td>Penerima</td><td>: {{ $biaya->penerima }}</td></tr>
-            <tr><td>Dibuat oleh</td><td>: {{ $biaya->user->name }}</td></tr>
-            <tr><td>Status</td><td>: {{ $biaya->status }}</td></tr>
+            <tr><td>Nomor</td><td>: INV-{{ $penjualan->id }}</td></tr>
+            <tr><td>Tanggal</td><td>: {{ $penjualan->created_at->format('d/m/Y H:i') }}</td></tr>
+            <tr><td>Pelanggan</td><td>: {{ $penjualan->pelanggan }}</td></tr>
+            <tr><td>Dibuat oleh</td><td>: {{ $penjualan->user->name }}</td></tr>
+            <tr><td>Status</td><td>: {{ $penjualan->status }}</td></tr>
         </table>
 
         <hr class="divider">
@@ -155,39 +167,37 @@
         {{-- STRUKTUR TABEL ITEM YANG BARU --}}
         {{-- ====================================================== --}}
         <table class="item-table">
-            <thead>
-                <tr>
-                    <th>Keterangan</th>
-                    <th>Jumlah</th>
-                </tr>
-            </thead>
+            {{-- Header (Keterangan/Jumlah) dihapus --}}
             <tbody>
-                @foreach($biaya->items as $item)
-                {{-- Baris Nama/Kategori --}}
-                <tr class="item-name">
-                    <td colspan="2">{{ $item->kategori }}</td>
-                </tr>
-
-                {{-- Baris Deskripsi (jika ada) --}}
-                @if($item->deskripsi)
+                @foreach($penjualan->items as $item)
                 <tr>
-                    <td class="label">Deskripsi</td>
-                    <td class="value">{{ $item->deskripsi }}</td>
-                </tr>
-                @endif
-
-                {{-- Baris Pajak (jika ada) --}}
-                @if($item->pajak)
-                <tr>
-                    <td class="label">Pajak</td>
-                    <td class="value">{{ $item->pajak }}</td>
-                </tr>
-                @endif
-                
-                {{-- Baris Jumlah --}}
-                <tr class="item-last-row">
-                    <td class="label">Jumlah</td>
-                    <td class="value">Rp{{ number_format($item->jumlah, 0, ',', '.') }}</td>
+                    <td colspan="2">
+                        <div class="item-name">{{ $item->produk }}</div>
+                        <table class="receipt-details-table">
+                            <tr>
+                                <td class="label">Qty</td>
+                                <td class="value">{{ $item->kuantitas }}</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Unit</td>
+                                <td class="value">{{ $item->unit ?? 'pcs' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Harga</td>
+                                <td class="value">Rp{{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
+                            </tr>
+                            @if($item->diskon > 0)
+                            <tr>
+                                <td class="label">Diskon</td>
+                                <td class="value">{{ $item->diskon }}%</td>
+                            </tr>
+                            @endif
+                            <tr>
+                                <td class="label">Jumlah</td>
+                                <td class="value">Rp{{ number_format($item->jumlah_baris, 0, ',', '.') }}</td>
+                            </tr>
+                        </table>
+                    </td>
                 </tr>
                 @endforeach
             </tbody>
@@ -199,11 +209,11 @@
         <table class="total-table">
             <tr>
                 <td>Subtotal</td>
-                <td class="text-right">Rp{{ number_format($biaya->items->sum('jumlah'), 0, ',', '.') }}</td>
+                <td class="text-right">Rp{{ number_format($penjualan->items->sum('jumlah_baris'), 0, ',', '.') }}</td>
             </tr>
             <tr class="grand-total">
                 <td>GRAND TOTAL</td>
-                <td class="text-right">Rp{{ number_format($biaya->grand_total, 0, ',', '.') }}</td>
+                <td class="text-right">Rp{{ number_format($penjualan->grand_total, 0, ',', '.') }}</td>
             </tr>
         </table>
 

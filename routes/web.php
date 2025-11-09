@@ -41,8 +41,17 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('pembelian', 'PembelianController');
     Route::resource('biaya', 'BiayaController');
 
-    Route::get('biaya/{biaya}/print', [BiayaController::class, 'print'])->name('biaya.print'); // <-- TAMBAHKAN INI
+    // Rute Biaya
+    Route::get('biaya/{biaya}/print', [BiayaController::class, 'print'])->name('biaya.print');
     Route::resource('biaya', 'BiayaController');
+
+    // Rute Penjualan
+    Route::get('penjualan/{penjualan}/print', [PenjualanController::class, 'print'])->name('penjualan.print'); // <-- TAMBAHKAN INI
+    Route::resource('penjualan', 'PenjualanController');
+
+    // Rute Pembelian
+    Route::get('pembelian/{pembelian}/print', [PembelianController::class, 'print'])->name('pembelian.print'); // <-- TAMBAHKAN INI
+    Route::resource('pembelian', 'PembelianController');
 
     Route::get('/pengaturan-admin', function() {
         return '<h1>Ini Halaman Pengaturan Admin</h1>';

@@ -170,4 +170,15 @@ class PembelianController extends Controller
         $pembelian->save();
         return redirect()->route('pembelian.index')->with('success', 'Data pembelian berhasil disetujui.');
     }
+
+    public function print(Pembelian $pembelian)
+    {
+        // Keamanan
+        if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
+            return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
+        }
+
+        $pembelian->load('items', 'user');
+        return view('pembelian.print', compact('pembelian'));
+    }
 }
