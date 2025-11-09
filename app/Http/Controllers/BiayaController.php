@@ -188,4 +188,18 @@ class BiayaController extends Controller
         $biaya->save();
         return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil disetujui.');
     }
+
+    public function print(Biaya $biaya)
+    {
+        // Keamanan: User hanya bisa print data sendiri, Admin bisa semua
+        if (auth()->user()->role != 'admin' && $biaya->user_id != auth()->id()) {
+            return redirect()->route('biaya.index')->with('error', 'Akses ditolak.');
+        }
+
+        // Muat relasi items dan user (sama seperti 'show')
+        $biaya->load('items', 'user');
+
+        // Kembalikan view 'print.blade.php' yang baru
+        return view('biaya.print', compact('biaya'));
+    }
 }

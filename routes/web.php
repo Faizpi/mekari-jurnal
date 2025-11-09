@@ -41,6 +41,9 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('pembelian', 'PembelianController');
     Route::resource('biaya', 'BiayaController');
 
+    Route::get('biaya/{biaya}/print', [BiayaController::class, 'print'])->name('biaya.print'); // <-- TAMBAHKAN INI
+    Route::resource('biaya', 'BiayaController');
+
     Route::get('/pengaturan-admin', function() {
         return '<h1>Ini Halaman Pengaturan Admin</h1>';
     })->middleware('role:admin');
