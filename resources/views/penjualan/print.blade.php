@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Struk Penjualan #{{ $penjualan->id }}</title>
     <style>
+        /* ... (Semua kode CSS 58mm Anda tidak berubah) ... */
         @page { size: 58mm; margin: 0; }
         @media screen {
             html { background-color: #E0E0E0; }
@@ -13,13 +14,12 @@
                 background: #fff; 
             }
         }
-        
         body {
-            width: 56mm; /* aman dari keluar garis (2mm margin kiri-kanan) */
-            margin: 1.5rem auto !important;;
+            width: 56mm;
+            margin: 0;
             padding: 0;
             font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 9.5pt;
+            font-size: 9pt;
             color: #000;
         }
         .container {
@@ -43,8 +43,6 @@
             border-top: 1px dashed #000;
             margin: 5px 0;
         }
-        
-        /* Info Utama */
         .info-table {
             width: 100%;
             font-size: 8.5pt;
@@ -57,45 +55,34 @@
         .info-table td:first-child {
             width: 36%;
         }
-
-        /* ====================================================== */
-        /* PERUBAHAN UTAMA: TATA LETAK TABEL ITEM */
-        /* ====================================================== */
         .item-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
         }
-        
-        /* Sembunyikan header tabel */
         .item-table thead {
             display: none;
         }
-
-        /* Setiap item sekarang adalah satu sel besar */
         .item-table td {
             vertical-align: top;
             padding: 6px 0;
-            border-bottom: 1px dashed #eee; /* Pemisah antar item */
+            border-bottom: 1px dashed #eee;
         }
-        
         .item-name {
             font-weight: bold;
             word-wrap: break-word;
             line-height: 1.2em;
         }
-
-        /* Tabel Rincian (Label Kiri, Value Kanan) */
         .receipt-details-table {
             width: 100%;
             margin-top: 3px;
             border-collapse: collapse;
-            font-size: 9pt; /* Ukuran font rincian */
+            font-size: 9pt;
         }
         .receipt-details-table td {
             padding: 1.5px 0;
             vertical-align: top;
-            border: none; /* Hapus border di dalam */
+            border: none;
         }
         .receipt-details-table .label {
             width: 40%;
@@ -104,12 +91,9 @@
         .receipt-details-table .value {
             width: 60%;
             text-align: right;
-            padding-right: 1mm; /* Bantalan agar tidak mepet */
+            padding-right: 1mm;
             white-space: nowrap;
         }
-        /* ====================================================== */
-        
-        /* TOTAL (CSS ini sudah benar) */
         .total-table {
             width: 100%;
             margin-top: 6px;
@@ -122,7 +106,7 @@
         .text-right {
             text-align: right;
             white-space: nowrap;
-            padding-right: 1mm; /* Bantalan agar tidak mepet */
+            padding-right: 1mm;
         }
         .grand-total {
             font-size: 11pt;
@@ -132,8 +116,6 @@
             padding-top: 3px;
             padding-bottom: 3px;
         }
-
-        /* FOOTER */
         .footer {
             text-align: center;
             margin-top: 10px;
@@ -158,20 +140,35 @@
             <tr><td>Tanggal</td><td>: {{ $penjualan->created_at->format('d/m/Y H:i') }}</td></tr>
             <tr><td>Pelanggan</td><td>: {{ $penjualan->pelanggan }}</td></tr>
             <tr><td>Dibuat oleh</td><td>: {{ $penjualan->user->name }}</td></tr>
-            <tr><td>Status</td><td>: {{ $penjualan->status }}</td></tr>
+            {{-- =================================== --}}
+            {{-- LOGIKA STATUS BARU --}}
+            {{-- =================================== --}}
+            <tr>
+                <td>Status</td>
+                <td>: 
+                    @php
+                        $statusText = $penjualan->status;
+                        if ($penjualan->status == 'Pending') {
+                            $statusText = 'Pending Approval';
+                        } elseif ($penjualan->status == 'Approved') {
+                            $statusText = 'Belum Dibayar';
+                            if ($penjualan->tgl_jatuh_tempo && \Carbon\Carbon::parse($penjualan->tgl_jatuh_tempo)->isPast()) {
+                                $statusText = 'Telat Dibayar';
+                            }
+                        }
+                    @endphp
+                    {{ $statusText }}
+                </td>
+            </tr>
         </table>
 
         <hr class="divider">
 
-        {{-- ====================================================== --}}
-        {{-- STRUKTUR TABEL ITEM YANG BARU --}}
-        {{-- ====================================================== --}}
         <table class="item-table">
-            {{-- Header (Keterangan/Jumlah) dihapus --}}
             <tbody>
                 @foreach($penjualan->items as $item)
                 <tr>
-                    <td colspan="2">
+                    <td>
                         <div class="item-name">{{ $item->produk }}</div>
                         <table class="receipt-details-table">
                             <tr>
@@ -202,7 +199,6 @@
                 @endforeach
             </tbody>
         </table>
-        {{-- ====================================================== --}}
 
         <hr class="divider">
 

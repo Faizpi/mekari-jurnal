@@ -6,8 +6,29 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Detail Penjualan #INV-{{ $penjualan->id }}</h1>
         <div>
-            {{-- TAMBAHKAN TOMBOL INI --}}
-            <a href="{{ route('penjualan.print', $penjualan->id) }}" target="_blank" class="btn btn-primary btn-sm shadow-sm">
+            {{-- =================================== --}}
+            {{-- TOMBOL AKSI UNTUK ADMIN --}}
+            {{-- =================================== --}}
+            @if(auth()->user()->role == 'admin')
+                {{-- 1. Tombol Approve (Hanya jika Pending) --}}
+                @if($penjualan->status == 'Pending')
+                    <form action="{{ route('penjualan.approve', $penjualan->id) }}" method="POST" class="d-inline" title="Setujui data ini">
+                        @csrf
+                        <button type="submit" class="btn btn-success btn-sm shadow-sm"><i class="fas fa-check fa-sm"></i> Setujui</button>
+                    </form>
+                @endif
+                
+                {{-- 2. Tombol "Tandai Lunas" (Hanya jika Approved/Telat) --}}
+                @if($penjualan->status == 'Approved')
+                    <form action="{{ route('penjualan.markAsPaid', $penjualan->id) }}" method="POST" class="d-inline" title="Tandai Lunas">
+                        @csrf
+                        <button type="submit" class="btn btn-primary btn-sm shadow-sm"><i class="fas fa-dollar-sign fa-sm"></i> Tandai Lunas</button>
+                    </form>
+                @endif
+            @endif
+            
+            {{-- Tombol Print & Kembali --}}
+            <a href="{{ route('penjualan.print', $penjualan->id) }}" target="_blank" class="btn btn-info btn-sm shadow-sm">
                 <i class="fas fa-print fa-sm"></i> Cetak Struk
             </a>
             <a href="{{ route('penjualan.index') }}" class="btn btn-secondary btn-sm shadow-sm">
@@ -15,6 +36,13 @@
             </a>
         </div>
     </div>
+    
+    @if (session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
 
     <div class="card shadow mb-4">
         <div class="card-header py-3">
@@ -27,7 +55,7 @@
                         <tr><td style="width: 30%;"><strong>Pembuat</strong></td><td>: {{ $penjualan->user->name }}</td></tr>
                         <tr><td><strong>Pelanggan</strong></td><td>: {{ $penjualan->pelanggan }}</td></tr>
                         <tr><td><strong>Email</strong></td><td>: {{ $penjualan->email ?? '-' }}</td></tr>
-                        <tr><td><strong>Tgl. Transaksi</strong></td><td>: {{ \Carbon\Carbon::parse($penjualan->tgl_transaksi)->format('d F Y') }}</td></tr>
+                        <tr><td><strong>Tgl. Transaksi</strong></td><td>: {{ \Carbon\Carbon::parse($penjualan->tgl_transaksi)->format('d F Y H:i') }}</td></tr>
                         <tr><td><strong>Tgl. Jatuh Tempo</strong></td><td>: {{ $penjualan->tgl_jatuh_tempo ? \Carbon\Carbon::parse($penjualan->tgl_jatuh_tempo)->format('d F Y') : '-' }}</td></tr>
                     </table>
                 </div>
@@ -35,14 +63,25 @@
                     <table class="table table-borderless">
                         <tr>
                             <td style="width: 30%;"><strong>Status</strong></td>
+                            {{-- =================================== --}}
+                            {{-- LOGIKA STATUS BARU --}}
+                            {{-- =================================== --}}
                             <td>: 
-                                @if($penjualan->status == 'Approved')
-                                    <span class="badge badge-success">{{ $penjualan->status }}</span>
-                                @elseif($penjualan->status == 'Pending')
-                                    <span class="badge badge-warning">{{ $penjualan->status }}</span>
-                                @else
-                                    <span class="badge badge-danger">{{ $penjualan->status }}</span>
-                                @endif
+                                @php
+                                    $statusBadge = 'badge-secondary';
+                                    $statusText = $penjualan->status;
+                                    if ($penjualan->status == 'Pending') {
+                                        $statusBadge = 'badge-warning'; $statusText = 'Pending Approval';
+                                    } elseif ($penjualan->status == 'Approved') {
+                                        $statusBadge = 'badge-info'; $statusText = 'Belum Dibayar';
+                                        if ($penjualan->tgl_jatuh_tempo && \Carbon\Carbon::parse($penjualan->tgl_jatuh_tempo)->isPast()) {
+                                            $statusBadge = 'badge-danger'; $statusText = 'Telat Dibayar';
+                                        }
+                                    } elseif ($penjualan->status == 'Lunas') {
+                                        $statusBadge = 'badge-success'; $statusText = 'Lunas';
+                                    }
+                                @endphp
+                                <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                             </td>
                         </tr>
                          <tr>

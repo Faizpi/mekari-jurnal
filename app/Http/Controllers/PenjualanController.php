@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Penjualan;
-use App\PenjualanItem;
-use App\User;
+use App\PenjualanItem; // Pastikan ini ada
+use App\User; // Pastikan namespace Model Anda benar (App\ atau App\Models\)
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -24,14 +24,23 @@ class PenjualanController extends Controller
             $query = Penjualan::where('user_id', Auth::id())->with('user');
         }
 
-        $totalBelumDibayar = (clone $query)->whereIn('status', ['Pending', 'Approved'])->sum('grand_total');
-        $totalTelatDibayar = (clone $query)->where('tgl_jatuh_tempo', '<', Carbon::now())
-                                          ->whereIn('status', ['Pending', 'Approved'])
-                                          ->sum('grand_total');
-        $pelunasan30Hari = (clone $query)->where('status', 'Lunas')
-                                        ->where('updated_at', '>=', Carbon::now()->subDays(30))
-                                        ->sum('grand_total');
+        // Kalkulasi untuk Kartu Ringkasan
+        $totalBelumDibayar = (clone $query)
+            ->whereIn('status', ['Pending', 'Approved']) // Status "Belum Dibayar" mencakup Pending DAN Approved
+            ->sum('grand_total');
 
+        $totalTelatDibayar = (clone $query)
+            ->where('status', 'Approved') // Hanya yang sudah disetujui yang bisa telat
+            ->whereNotNull('tgl_jatuh_tempo')
+            ->where('tgl_jatuh_tempo', '<', Carbon::now())
+            ->sum('grand_total');
+
+        $pelunasan30Hari = (clone $query)
+            ->where('status', 'Lunas')
+            ->where('updated_at', '>=', Carbon::now()->subDays(30))
+            ->sum('grand_total');
+
+        // Ambil data untuk tabel
         $allPenjualan = $query->latest()->get();
 
         return view('penjualan.index', [
@@ -55,16 +64,14 @@ class PenjualanController extends Controller
      */
     public function store(Request $request)
     {
-        // =================================================================
-        // VALIDASI LENGKAP (INILAH PERBAIKANNYA)
-        // =================================================================
+        // Validasi lengkap
         $request->validate([
             // Validasi field utama
             'pelanggan' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'alamat_penagihan' => 'nullable|string',
             'tgl_transaksi' => 'required|date',
-            'tgl_jatuh_tempo' => 'nullable|date',
+            'tgl_jatuh_tempo' => 'nullable|date|after_or_equal:tgl_transaksi',
             'syarat_pembayaran' => 'nullable|string|max:255',
             'no_referensi' => 'nullable|string|max:255',
             'tag' => 'nullable|string|max:255',
@@ -75,11 +82,11 @@ class PenjualanController extends Controller
             'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048', // 2MB Max
             
             // Validasi Array
-            'produk' => 'required|array',
+            'produk' => 'required|array|min:1',
             'deskripsi' => 'nullable|array',
-            'kuantitas' => 'required|array',
+            'kuantitas' => 'required|array|min:1',
             'unit' => 'nullable|array',
-            'harga_satuan' => 'required|array',
+            'harga_satuan' => 'required|array|min:1',
             'diskon' => 'nullable|array',
             
             // Validasi setiap item di dalam array
@@ -90,7 +97,6 @@ class PenjualanController extends Controller
             'harga_satuan.*' => 'required|numeric|min:0',
             'diskon.*' => 'nullable|numeric|min:0|max:100',
         ]);
-        // =================================================================
 
         // 1. Proses upload file
         $path = null;
@@ -162,12 +168,18 @@ class PenjualanController extends Controller
 
     /**
      * Menampilkan form edit.
+     * (Saat ini hanya edit data induk)
      */
     public function edit(Penjualan $penjualan)
     {
         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
              return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
+         // Hanya user yang statusnya masih Pending yang bisa edit
+         if ($penjualan->status != 'Pending' && auth()->user()->role != 'admin') {
+            return redirect()->route('penjualan.index')->with('error', 'Data yang sudah disetujui tidak bisa diedit.');
+         }
+
         return view('penjualan.edit', compact('penjualan'));
     }
 
@@ -184,7 +196,7 @@ class PenjualanController extends Controller
             'pelanggan' => 'required|string|max:255',
             'tgl_transaksi' => 'required|date',
             'status' => 'required|string',
-            'grand_total' => 'required|numeric', // Sesuaikan jika form edit bisa mengubah total
+            // validasi lainnya jika diperlukan
         ]);
         
         $penjualan->update($request->all());
@@ -199,13 +211,18 @@ class PenjualanController extends Controller
         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
              return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
+
+        // Hanya data pending yang boleh dihapus user
+        if ($penjualan->status != 'Pending' && auth()->user()->role != 'admin') {
+            return redirect()->route('penjualan.index')->with('error', 'Data yang sudah diproses tidak bisa dihapus.');
+         }
         
         $penjualan->delete();
         return redirect()->route('penjualan.index')->with('success', 'Data penjualan berhasil dihapus.');
     }
 
     /**
-     * Menyetujui data penjualan.
+     * Menyetujui data penjualan (Admin).
      */
     public function approve(Penjualan $penjualan)
     {
@@ -217,6 +234,24 @@ class PenjualanController extends Controller
         return redirect()->route('penjualan.index')->with('success', 'Data penjualan berhasil disetujui.');
     }
 
+    /**
+     * Menandai data sebagai Lunas (Admin).
+     */
+    public function markAsPaid(Penjualan $penjualan)
+    {
+        if (auth()->user()->role != 'admin') {
+             return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+        }
+        
+        $penjualan->status = 'Lunas';
+        $penjualan->save();
+
+        return redirect()->route('penjualan.index')->with('success', 'Penjualan telah ditandai LUNAS.');
+    }
+
+    /**
+     * Menampilkan halaman print struk untuk penjualan.
+     */
     public function print(Penjualan $penjualan)
     {
         // Keamanan

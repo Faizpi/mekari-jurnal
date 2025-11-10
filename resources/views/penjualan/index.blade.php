@@ -25,50 +25,35 @@
 <div class="row">
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Faktur Belum Dibayar</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalBelumDibayar, 0, ',', '.') }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
-                    </div>
+            <div class="card-body"><div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Faktur Belum Dibayar</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalBelumDibayar, 0, ',', '.') }}</div>
                 </div>
-            </div>
+                <div class="col-auto"><i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i></div>
+            </div></div>
         </div>
     </div>
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-danger shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                            Penagihan Telat Dibayar</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalTelatDibayar, 0, ',', '.') }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                    </div>
+            <div class="card-body"><div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Penagihan Telat Dibayar</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalTelatDibayar, 0, ',', '.') }}</div>
                 </div>
-            </div>
+                <div class="col-auto"><i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i></div>
+            </div></div>
         </div>
     </div>
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Pelunasan (30 Hari Terakhir)</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($pelunasan30Hari, 0, ',', '.') }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                    </div>
+            <div class="card-body"><div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Pelunasan (30 Hari Terakhir)</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($pelunasan30Hari, 0, ',', '.') }}</div>
                 </div>
-            </div>
+                <div class="col-auto"><i class="fas fa-check-circle fa-2x text-gray-300"></i></div>
+            </div></div>
         </div>
     </div>
 </div>
@@ -87,7 +72,7 @@
                         <th>Pembuat</th>
                         <th>Pelanggan</th>
                         <th class="text-right">Grand Total</th>
-                        <th class="text-center">Status</th>
+                        <th class="text-center">Status Pembayaran</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -103,34 +88,83 @@
                         <td>{{ $item->user->name }}</td>
                         <td>{{ $item->pelanggan }}</td>
                         <td class="text-right font-weight-bold">Rp {{ number_format($item->grand_total, 0, ',', '.') }}</td>
+                        
+                        {{-- =================================== --}}
+                        {{-- LOGIKA STATUS BARU --}}
+                        {{-- =================================== --}}
                         <td class="text-center">
-                            @if($item->status == 'Approved')
-                                <span class="badge badge-success">{{ $item->status }}</span>
-                            @elseif($item->status == 'Pending')
-                                <span class="badge badge-warning">{{ $item->status }}</span>
-                            @else
-                                <span class="badge badge-danger">{{ $item->status }}</span>
-                            @endif
+                            @php
+                                $statusBadge = 'badge-secondary';
+                                $statusText = $item->status;
+
+                                if ($item->status == 'Pending') {
+                                    $statusBadge = 'badge-warning';
+                                    $statusText = 'Pending Approval';
+                                } elseif ($item->status == 'Approved') {
+                                    $statusBadge = 'badge-info';
+                                    $statusText = 'Belum Dibayar';
+                                    
+                                    // Cek apakah telat
+                                    if ($item->tgl_jatuh_tempo && \Carbon\Carbon::parse($item->tgl_jatuh_tempo)->isPast()) {
+                                        $statusBadge = 'badge-danger';
+                                        $statusText = 'Telat Dibayar';
+                                    }
+                                } elseif ($item->status == 'Lunas') {
+                                    $statusBadge = 'badge-success';
+                                    $statusText = 'Lunas';
+                                }
+                            @endphp
+                            <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                         </td>
+                        
+                        {{-- =================================== --}}
+                        {{-- LOGIKA TOMBOL AKSI BARU --}}
+                        {{-- =================================== --}}
                         <td class="text-center">
-                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
-                                <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
+                            @if(auth()->user()->role == 'admin')
+                                {{-- === TOMBOL ADMIN === --}}
+
+                                {{-- 1. Tombol Approve (Hanya jika Pending) --}}
+                                @if($item->status == 'Pending')
+                                    <form action="{{ route('penjualan.approve', $item->id) }}" method="POST" class="d-inline" title="Setujui data ini">
+                                        @csrf
+                                        <button type="submit" class="btn btn-success btn-circle btn-sm"><i class="fas fa-check"></i></button>
+                                    </form>
+                                @endif
+
+                                {{-- 2. Tombol "Tandai Lunas" (Hanya jika Approved/Telat) --}}
+                                @if($item->status == 'Approved')
+                                    <form action="{{ route('penjualan.markAsPaid', $item->id) }}" method="POST" class="d-inline" title="Tandai Lunas">
+                                        @csrf
+                                        <button type="submit" class="btn btn-primary btn-circle btn-sm"><i class="fas fa-dollar-sign"></i></button>
+                                    </form>
+                                @endif
+                                
+                                {{-- 3. Tombol Edit (Selalu ada) --}}
+                                <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
                                     <i class="fas fa-pen"></i>
                                 </a>
-                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                
+                                {{-- 4. Tombol Hapus (Selalu ada) --}}
+                                <button type="button" class="btn btn-danger btn-circle btn-sm" title="Hapus"
                                         data-toggle="modal" data-target="#deleteModal" data-action="{{ route('penjualan.destroy', $item->id) }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                                @if(auth()->user()->role == 'admin' && $item->status == 'Pending')
-                                    <form action="{{ route('penjualan.approve', $item->id) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
-                                @endif
                             @else
-                                <span class="text-muted small">Terkunci</span>
+                                {{-- === TOMBOL USER BIASA === --}}
+                                @if($item->status == 'Pending')
+                                    {{-- User bisa Edit/Hapus HANYA JIKA Pending --}}
+                                    <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-danger btn-circle btn-sm" title="Hapus"
+                                            data-toggle="modal" data-target="#deleteModal" data-action="{{ route('penjualan.destroy', $item->id) }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                @else
+                                    {{-- Terkunci jika sudah Approved/Lunas --}}
+                                    <span class="text-muted small">Terkunci</span>
+                                @endif
                             @endif
                         </td>
                     </tr>
