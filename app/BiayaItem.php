@@ -13,7 +13,6 @@ class BiayaItem extends Model
         'biaya_id',
         'kategori',
         'deskripsi',
-        'pajak',
         'jumlah',
     ];
 

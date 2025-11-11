@@ -82,7 +82,7 @@
                     </div>
                 </div>
 
-                {{-- TABEL PRODUK/JASA --}}
+                {{-- TABEL PRODUK/JASA (Tidak ada kolom Pajak) --}}
                 <div class="table-responsive mt-3">
                     <table class="table table-bordered">
                         <thead class="thead-light">
@@ -98,7 +98,6 @@
                             </tr>
                         </thead>
                         <tbody id="product-table-body">
-                            {{-- Tampilkan baris lama jika ada error validasi --}}
                             @if(old('produk_id'))
                                 @foreach(old('produk_id') as $index => $oldProdukId)
                                     <tr>
@@ -125,7 +124,6 @@
                                     </tr>
                                 @endforeach
                             @else
-                                {{-- Baris default --}}
                                 <tr>
                                     <td>
                                         <select class="form-control product-select @error('produk_id.0') is-invalid @enderror" name="produk_id[]" required>
@@ -136,7 +134,6 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                        @error('produk_id.0') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                     </td>
                                     <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
                                     <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
@@ -151,8 +148,6 @@
                     </table>
                 </div>
                 <button type="button" class="btn btn-link pl-0" id="add-product-row">+ Tambah Data</button>
-
-                {{-- Tampilkan pesan error untuk validasi array --}}
                 @error('produk_id.*') <div class="text-danger small mt-2">Error di baris Produk: {{ $message }}</div> @enderror
                 @error('kuantitas.*') <div class="text-danger small mt-2">Error di baris Kuantitas: {{ $message }}</div> @enderror
                 @error('harga_satuan.*') <div class="text-danger small mt-2">Error di baris Harga: {{ $message }}</div> @enderror
@@ -175,11 +170,28 @@
                         </div>
                     </div>
                     <div class="col-md-6">
+                        {{-- =================================== --}}
+                        {{-- TABEL TOTAL (DENGAN INPUT PAJAK MANUAL %) --}}
+                        {{-- =================================== --}}
                         <table class="table table-borderless text-right">
                             <tbody>
                                 <tr>
                                     <td><strong>Subtotal</strong></td>
                                     <td id="subtotal-display">Rp0,00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Pajak (%)</strong></td>
+                                    <td style="width: 50%;">
+                                        <input type="number" class="form-control text-right @error('tax_percentage') is-invalid @enderror" 
+                                               id="tax_percentage_input" name="tax_percentage" value="{{ old('tax_percentage', 0) }}" min="0" step="0.01">
+                                        @error('tax_percentage') 
+                                            <div class="invalid-feedback d-block text-right">{{ $message }}</div> 
+                                        @enderror
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Jumlah Pajak</td>
+                                    <td id="tax-amount-display">Rp0,00</td>
                                 </tr>
                                 <tr class="border-top">
                                     <td class="h5"><strong>Total</strong></td>
@@ -208,8 +220,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('product-table-body');
     const addRowBtn = document.getElementById('add-product-row');
-    
-    // Simpan HTML dropdown produk untuk baris baru
+    const taxInput = document.getElementById('tax_percentage_input'); // <-- Input Pajak
+
     const productDropdownHtml = `
         <select class="form-control product-select" name="produk_id[]" required>
             <option value="">Pilih produk...</option>
@@ -221,9 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </select>
     `;
 
-    const formatRupiah = (angka) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-    };
+    const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
     const calculateRow = (row) => {
         const quantity = parseFloat(row.querySelector('.product-quantity').value) || 0;
@@ -240,35 +250,36 @@ document.addEventListener('DOMContentLoaded', function () {
             const lineTotal = parseFloat(row.querySelector('.product-line-total').value) || 0;
             subtotal += lineTotal;
         });
+
+        let taxPercentage = parseFloat(taxInput.value) || 0;
+        let taxAmount = subtotal * (taxPercentage / 100);
+        const total = subtotal + taxAmount;
+        
         document.getElementById('subtotal-display').innerText = formatRupiah(subtotal);
-        document.getElementById('total-display').innerHTML = `<strong>${formatRupiah(subtotal)}</strong>`;
-        document.getElementById('sisa-tagihan-display').innerHTML = `<strong>${formatRupiah(subtotal)}</strong>`;
-        document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(subtotal)}`;
+        document.getElementById('tax-amount-display').innerText = formatRupiah(taxAmount);
+        document.getElementById('total-display').innerHTML = `<strong>${formatRupiah(total)}</strong>`;
+        document.getElementById('sisa-tagihan-display').innerHTML = `<strong>${formatRupiah(total)}</strong>`;
+        document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(total)}`;
     };
 
-    // --- FUNGSI AUTOFILL ---
     const handleProductChange = (event) => {
         if (!event.target.classList.contains('product-select')) return;
-
         const selectedOption = event.target.options[event.target.selectedIndex];
         const row = event.target.closest('tr');
-
         const harga = selectedOption.dataset.harga || 0;
         const deskripsi = selectedOption.dataset.deskripsi || '';
-
         row.querySelector('.product-price').value = harga;
         row.querySelector('.product-description').value = deskripsi;
-        
         calculateRow(row);
     };
 
-    // --- EVENT LISTENERS ---
     tableBody.addEventListener('input', function(event) {
         if (event.target.classList.contains('product-quantity') || event.target.classList.contains('product-price') || event.target.classList.contains('product-discount')) {
             calculateRow(event.target.closest('tr'));
         }
     });
 
+    taxInput.addEventListener('input', calculateGrandTotal); // <-- Hitung ulang jika pajak berubah
     tableBody.addEventListener('change', handleProductChange);
 
     addRowBtn.addEventListener('click', function () {
@@ -292,10 +303,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Hitung total saat halaman dimuat (untuk data 'old' jika ada)
     tableBody.querySelectorAll('tr').forEach(row => calculateRow(row));
 
-    // Script untuk nama file
     document.querySelectorAll('.custom-file-input').forEach(input => {
         input.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {

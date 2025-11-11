@@ -23,7 +23,6 @@ class CreateBiayaItemsTable extends Migration
             // Kolom rincian
             $table->string('kategori');
             $table->string('deskripsi')->nullable();
-            $table->string('pajak')->nullable();
             $table->decimal('jumlah', 15, 2);
 
             $table->timestamps();

@@ -50,13 +50,17 @@
                     </table>
                 </div>
                 <div class="col-md-6">
+                    {{-- Siapkan variabel kalkulasi --}}
+                    @php
+                        $subtotal = $penjualan->items->sum('jumlah_baris');
+                        $taxAmount = $subtotal * ($penjualan->tax_percentage / 100);
+                    @endphp
                     <table class="table table-borderless">
                         <tr>
                             <td style="width: 30%;"><strong>Status</strong></td>
                             <td>: 
                                 @php
-                                    $statusBadge = 'badge-secondary';
-                                    $statusText = $penjualan->status;
+                                    $statusBadge = 'badge-secondary'; $statusText = $penjualan->status;
                                     if ($penjualan->status == 'Pending') {
                                         $statusBadge = 'badge-warning'; $statusText = 'Pending Approval';
                                     } elseif ($penjualan->status == 'Approved') {
@@ -70,6 +74,14 @@
                                 @endphp
                                 <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                             </td>
+                        </tr>
+                         <tr>
+                            <td><strong>Subtotal</strong></td>
+                            <td>: Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pajak ({{ $penjualan->tax_percentage }}%)</strong></td>
+                            <td>: Rp {{ number_format($taxAmount, 0, ',', '.') }}</td>
                         </tr>
                          <tr>
                             <td><strong>Grand Total</strong></td>
@@ -92,7 +104,7 @@
                 <table class="table table-bordered">
                     <thead class="thead-light">
                         <tr>
-                            <th>Item Code</th> {{-- <-- KOLOM BARU --}}
+                            <th>Item Code</th>
                             <th>Produk</th>
                             <th>Deskripsi</th>
                             <th class="text-center">Kuantitas</th>
@@ -104,7 +116,7 @@
                     <tbody>
                         @foreach($penjualan->items as $item)
                         <tr>
-                            <td>{{ $item->produk->item_code ?? 'N/A' }}</td> {{-- <-- DATA BARU --}}
+                            <td>{{ $item->produk->item_code ?? 'N/A' }}</td>
                             <td>{{ $item->produk->nama_produk }}</td>
                             <td>{{ $item->deskripsi ?? '-' }}</td>
                             <td class="text-center">{{ $item->kuantitas }}</td>

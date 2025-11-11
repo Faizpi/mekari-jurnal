@@ -15,7 +15,7 @@
         }
         body {
             width: 56mm;
-            margin: 1.5rem auto !important;;
+            margin: 0;
             padding: 0;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 9pt;
@@ -55,20 +55,16 @@
             width: 36%;
         }
         
-        /* ====================================================== */
-        /* PERUBAHAN TATA LETAK TABEL ITEM */
-        /* ====================================================== */
+        /* Item Table */
         .item-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
             font-size: 9pt;
         }
-        /* Sembunyikan header tabel */
         .item-table thead {
             display: none;
         }
-        /* Atur padding untuk setiap sel */
         .item-table td {
             padding: 1.5px 0;
             vertical-align: top;
@@ -76,7 +72,7 @@
         .item-table .label {
             width: 40%;
             text-align: left;
-            padding-left: 2mm; /* Menjorok sedikit */
+            padding-left: 2mm;
         }
         .item-table .value {
             width: 60%;
@@ -84,20 +80,17 @@
             padding-right: 1mm;
             white-space: nowrap;
         }
-        /* Style untuk nama item/kategori */
         .item-table .item-name {
             font-weight: bold;
-            padding-top: 5px; /* Beri jarak antar item */
+            padding-top: 5px;
             padding-left: 0;
         }
-        /* Style untuk baris terakhir item */
         .item-table tr.item-last-row td {
             padding-bottom: 5px;
             border-bottom: 1px dashed #eee;
         }
-        /* ====================================================== */
         
-        /* TOTAL (CSS ini sudah benar) */
+        /* Total */
         .total-table {
             width: 100%;
             margin-top: 6px;
@@ -121,7 +114,7 @@
             padding-bottom: 3px;
         }
         
-        /* FOOTER */
+        /* Footer */
         .footer {
             text-align: center;
             margin-top: 10px;
@@ -151,9 +144,6 @@
 
         <hr class="divider">
 
-        {{-- ====================================================== --}}
-        {{-- STRUKTUR TABEL ITEM YANG BARU --}}
-        {{-- ====================================================== --}}
         <table class="item-table">
             <thead>
                 <tr>
@@ -163,28 +153,17 @@
             </thead>
             <tbody>
                 @foreach($biaya->items as $item)
-                {{-- Baris Nama/Kategori --}}
                 <tr class="item-name">
                     <td colspan="2">{{ $item->kategori }}</td>
                 </tr>
 
-                {{-- Baris Deskripsi (jika ada) --}}
                 @if($item->deskripsi)
                 <tr>
                     <td class="label">Deskripsi</td>
                     <td class="value">{{ $item->deskripsi }}</td>
                 </tr>
                 @endif
-
-                {{-- Baris Pajak (jika ada) --}}
-                @if($item->pajak)
-                <tr>
-                    <td class="label">Pajak</td>
-                    <td class="value">{{ $item->pajak }}</td>
-                </tr>
-                @endif
                 
-                {{-- Baris Jumlah --}}
                 <tr class="item-last-row">
                     <td class="label">Jumlah</td>
                     <td class="value">Rp{{ number_format($item->jumlah, 0, ',', '.') }}</td>
@@ -192,14 +171,21 @@
                 @endforeach
             </tbody>
         </table>
-        {{-- ====================================================== --}}
 
         <hr class="divider">
 
         <table class="total-table">
+            @php
+                $subtotal = $biaya->items->sum('jumlah');
+                $taxAmount = $subtotal * ($biaya->tax_percentage / 100);
+            @endphp
             <tr>
                 <td>Subtotal</td>
-                <td class="text-right">Rp{{ number_format($biaya->items->sum('jumlah'), 0, ',', '.') }}</td>
+                <td class="text-right">Rp{{ number_format($subtotal, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Pajak ({{ $biaya->tax_percentage }}%)</td>
+                <td class="text-right">Rp{{ number_format($taxAmount, 0, ',', '.') }}</td>
             </tr>
             <tr class="grand-total">
                 <td>GRAND TOTAL</td>

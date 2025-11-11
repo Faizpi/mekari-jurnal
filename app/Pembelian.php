@@ -20,6 +20,7 @@ class Pembelian extends Model
         'lampiran_path',
         'status',
         'grand_total',
+        'tax_percentage',
         // 'total_barang' sudah dihapus dari $fillable karena pindah ke 'items'
     ];
 

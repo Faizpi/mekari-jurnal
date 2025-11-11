@@ -35,7 +35,8 @@ public function up()
             
             // Info Status & Total
             $table->string('status')->default('Pending');
-            $table->decimal('grand_total', 15, 2); // Total akhir semua item
+            $table->decimal('grand_total', 15, 2);
+            $table->decimal('tax_percentage', 5, 2)->default(0); // Total akhir semua item
 
             $table->timestamps();
         });

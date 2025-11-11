@@ -31,7 +31,8 @@ public function up()
             
             // Info Status & Total
             $table->string('status')->default('Pending');
-            $table->decimal('grand_total', 15, 2); // <-- TAMBAHKAN INI
+            $table->decimal('grand_total', 15, 2);
+            $table->decimal('tax_percentage', 5, 2)->default(0); // <-- TAMBAHKAN INI
 
             $table->timestamps();
         });

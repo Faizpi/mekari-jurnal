@@ -19,6 +19,7 @@ class Biaya extends Model
         'lampiran_path',
         'status',
         'grand_total',
+        'tax_percentage',
     ];
 
     protected $casts = [

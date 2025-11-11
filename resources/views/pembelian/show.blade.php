@@ -32,11 +32,15 @@
                         <tr><td style="width: 30%;"><strong>Pembuat</strong></td><td>: {{ $pembelian->user->name }}</td></tr>
                         <tr><td><strong>Staf Penyetuju</strong></td><td>: {{ $pembelian->staf_penyetuju }}</td></tr>
                         <tr><td><strong>Email Penyetuju</strong></td><td>: {{ $pembelian->email_penyetuju ?? '-' }}</td></tr>
-                        <tr><td><strong>Tgl. Transaksi</strong></td><td>: {{ \Carbon\Carbon::parse($pembelian->tgl_transaksi)->format('d F Y H:i') }}</td></tr>
-                        <tr><td><strong>Tgl. Jatuh Tempo</strong></td><td>: {{ $pembelian->tgl_jatuh_tempo ? \Carbon\Carbon::parse($pembelian->tgl_jatuh_tempo)->format('d F Y') : '-' }}</td></tr>
+                        <tr><td><strong>Tgl. Transaksi</strong></td><td>: {{ $pembelian->tgl_transaksi->format('d F Y H:i') }}</td></tr>
+                        <tr><td><strong>Gudang</strong></td><td>: {{ $pembelian->user->gudang->nama_gudang ?? '-' }}</td></tr>
                     </table>
                 </div>
                 <div class="col-md-6">
+                    @php
+                        $subtotal = $pembelian->items->sum('jumlah_baris');
+                        $taxAmount = $subtotal * ($pembelian->tax_percentage / 100);
+                    @endphp
                     <table class="table table-borderless">
                         <tr>
                             <td style="width: 30%;"><strong>Status</strong></td>
@@ -49,6 +53,14 @@
                                     <span class="badge badge-danger">{{ $pembelian->status }}</span>
                                 @endif
                             </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Subtotal</strong></td>
+                            <td>: Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pajak ({{ $pembelian->tax_percentage }}%)</strong></td>
+                            <td>: Rp {{ number_format($taxAmount, 0, ',', '.') }}</td>
                         </tr>
                         <tr>
                             <td><strong>Grand Total</strong></td>
@@ -72,6 +84,7 @@
                 <table class="table table-bordered">
                     <thead class="thead-light">
                         <tr>
+                            <th>Item Code</th>
                             <th>Produk</th>
                             <th>Deskripsi</th>
                             <th class="text-center">Kuantitas</th>
@@ -83,6 +96,7 @@
                     <tbody>
                         @foreach($pembelian->items as $item)
                         <tr>
+                            <td>{{ $item->produk->item_code ?? 'N/A' }}</td>
                             <td>{{ $item->produk->nama_produk }}</td>
                             <td>{{ $item->deskripsi ?? '-' }}</td>
                             <td class="text-center">{{ $item->kuantitas }}</td>

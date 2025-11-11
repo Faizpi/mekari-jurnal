@@ -85,7 +85,7 @@
                              <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="tag">Tag</label>
-                                    <input type="text" class="form-control @error('tag') is-invalid @enderror" id="tag" name="tag" value="{{ old('tag') }}">
+                                    <input type="text" class="form-control @error('tag') is-invalid @enderror" id="tag" name="tag" value="{{ old('tag', auth()->user()->name) }}" readonly>
                                     @error('tag')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -100,26 +100,18 @@
                     <table class="table table-bordered">
                         <thead class="thead-light">
                             <tr>
-                                <th style="width: 30%;">Akun Biaya</th>
+                                <th style="width: 40%;">Akun Biaya</th>
                                 <th>Deskripsi</th>
-                                <th style="width: 20%;">Pajak</th>
-                                <th class="text-right" style="width: 25%;">Jumlah</th>
+                                <th class="text-right" style="width: 30%;">Jumlah</th>
                                 <th style="width: 5%"></th>
                             </tr>
                         </thead>
                         <tbody id="expense-table-body">
-                            {{-- Tampilkan baris lama jika ada error validasi --}}
                             @if(old('kategori'))
                                 @foreach(old('kategori') as $index => $oldKategori)
                                     <tr>
                                         <td><input type="text" class="form-control" name="kategori[]" value="{{ $oldKategori }}" placeholder="Contoh: Biaya Kantor"></td>
                                         <td><input type="text" class="form-control" name="deskripsi_akun[]" value="{{ old('deskripsi_akun.'.$index) }}"></td>
-                                        <td>
-                                            <select class="form-control expense-tax" name="pajak[]">
-                                                <option value="0" {{ old('pajak.'.$index) == 0 ? 'selected' : '' }}>Tidak Ada Pajak</option>
-                                                <option value="11" {{ old('pajak.'.$index) == 11 ? 'selected' : '' }}>PPN (11%)</option>
-                                            </select>
-                                        </td>
                                         <td><input type="number" class="form-control text-right expense-amount" name="total[]" value="{{ old('total.'.$index) }}" placeholder="0" required></td>
                                         <td>
                                             @if($index > 0)
@@ -129,16 +121,9 @@
                                     </tr>
                                 @endforeach
                             @else
-                                {{-- Baris default jika tidak ada error --}}
                                 <tr>
                                     <td><input type="text" class="form-control" name="kategori[]" placeholder="Contoh: Biaya Kantor"></td>
                                     <td><input type="text" class="form-control" name="deskripsi_akun[]"></td>
-                                    <td>
-                                        <select class="form-control expense-tax" name="pajak[]">
-                                            <option value="0">Tidak Ada Pajak</option>
-                                            <option value="11">PPN (11%)</option>
-                                        </select>
-                                    </td>
                                     <td><input type="number" class="form-control text-right expense-amount" name="total[]" placeholder="0" required></td>
                                     <td></td>
                                 </tr>
@@ -147,14 +132,10 @@
                     </table>
                 </div>
                 <button type="button" class="btn btn-dark btn-sm" id="add-row-btn">+ Tambah Data</button>
-                
-                {{-- Pesan Error untuk Validasi Array --}}
-                @error('kategori') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
                 @error('kategori.*') <div class="text-danger small mt-2">Error di baris Kategori: {{ $message }}</div> @enderror
-                @error('pajak.*') <div class="text-danger small mt-2">Error di baris Pajak: {{ $message }}</div> @enderror
                 @error('total.*') <div class="text-danger small mt-2">Error di baris Jumlah: {{ $message }}</div> @enderror
 
-                {{-- BAGIAN BAWAH --}}
+                {{-- BAGIAN BAWAH (MEMO & TOTAL) --}}
                 <div class="row mt-3">
                     <div class="col-md-6">
                         <div class="form-group">
@@ -176,15 +157,29 @@
                         </div>
                     </div>
                     <div class="col-md-6">
+                         {{-- =================================== --}}
+                         {{-- TABEL TOTAL (DENGAN INPUT PAJAK MANUAL %) --}}
+                         {{-- =================================== --}}
                          <table class="table table-borderless text-right">
                             <tbody>
                                 <tr>
-                                    <td>Subtotal</td>
+                                    <td><strong>Subtotal</strong></td>
                                     <td id="subtotal-display">Rp0,00</td>
                                 </tr>
-                                 <tr>
-                                    <td>Pajak (PPN 11%)</td>
-                                    <td id="tax-display">Rp0,00</td>
+                                <tr>
+                                    <td><strong>Pajak (%)</strong></td>
+                                    <td style="width: 50%;">
+                                        {{-- UBAH DARI SELECT MENJADI INPUT NUMBER --}}
+                                        <input type="number" class="form-control text-right @error('tax_percentage') is-invalid @enderror" 
+                                               id="tax_percentage_input" name="tax_percentage" value="{{ old('tax_percentage', 0) }}" min="0" step="0.01">
+                                        @error('tax_percentage') 
+                                            <div class="invalid-feedback d-block text-right">{{ $message }}</div> 
+                                        @enderror
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Jumlah Pajak</td>
+                                    <td id="tax-amount-display">Rp0,00</td>
                                 </tr>
                                 <tr class="border-top">
                                     <td class="h5"><strong>Total</strong></td>
@@ -209,50 +204,51 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('expense-table-body');
     const addRowBtn = document.getElementById('add-row-btn');
+    // UBAH NAMA VARIABEL DARI taxSelect MENJADI taxInput
+    const taxInput = document.getElementById('tax_percentage_input');
 
     const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
     const calculateTotalExpense = () => {
         let subtotal = 0;
-        let totalTax = 0;
-        tableBody.querySelectorAll('tr').forEach(row => {
-            const amount = parseFloat(row.querySelector('.expense-amount').value) || 0;
-            const taxRate = parseFloat(row.querySelector('.expense-tax').value) || 0;
-            subtotal += amount;
-            if (taxRate > 0) {
-                totalTax += amount * (taxRate / 100);
-            }
+        tableBody.querySelectorAll('.expense-amount').forEach(input => {
+            subtotal += parseFloat(input.value) || 0;
         });
-        const total = subtotal + totalTax;
+        
+        // UBAH LOGIKA UNTUK MEMBACA DARI INPUT
+        let taxPercentage = parseFloat(taxInput.value) || 0;
+        let taxAmount = subtotal * (taxPercentage / 100);
+        
+        const total = subtotal + taxAmount;
+        
         document.getElementById('subtotal-display').innerText = formatRupiah(subtotal);
-        document.getElementById('tax-display').innerText = formatRupiah(totalTax);
+        document.getElementById('tax-amount-display').innerText = formatRupiah(taxAmount);
         document.getElementById('total-display').innerHTML = `<strong>${formatRupiah(total)}</strong>`;
         document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(total)}`;
     };
 
+    // Hitung ulang jika input jumlah di tabel berubah
     tableBody.addEventListener('input', function(event) {
-        if (event.target.classList.contains('expense-amount') || event.target.classList.contains('expense-tax')) {
+        if (event.target.classList.contains('expense-amount')) {
             calculateTotalExpense();
         }
     });
 
+    // UBAH EVENT DARI 'change' MENJADI 'input' AGAR LANGSUNG BERUBAH
+    taxInput.addEventListener('input', calculateTotalExpense);
+
+    // Tambah baris baru
     addRowBtn.addEventListener('click', function() {
         const newRow = tableBody.insertRow();
         newRow.innerHTML = `
             <td><input type="text" class="form-control" name="kategori[]" placeholder="Contoh: Biaya Internet"></td>
             <td><input type="text" class="form-control" name="deskripsi_akun[]"></td>
-            <td>
-                <select class="form-control expense-tax" name="pajak[]">
-                    <option value="0">Tidak Ada Pajak</option>
-                    <option value="11">PPN (11%)</option>
-                </select>
-            </td>
             <td><input type="number" class="form-control text-right expense-amount" name="total[]" placeholder="0" required></td>
             <td><button type="button" class="btn btn-danger btn-sm remove-row-btn">X</button></td>
         `;
-        calculateTotalExpense(); // Hitung ulang saat baris baru ditambahkan
     });
 
+    // Hapus baris
     tableBody.addEventListener('click', function (event) {
         if (event.target.classList.contains('remove-row-btn')) {
             event.target.closest('tr').remove();
@@ -260,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     
-    // Hitung total saat halaman dimuat (untuk data 'old' jika ada)
+    // Hitung total saat halaman dimuat
     calculateTotalExpense();
 
     // Script untuk menampilkan nama file di input

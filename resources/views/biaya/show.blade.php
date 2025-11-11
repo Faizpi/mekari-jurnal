@@ -5,16 +5,20 @@
 
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Detail Biaya #{{ $biaya->id }}</h1>
-
         <div>
-            <a href="{{ route('biaya.print', $biaya->id) }}" target="_blank" class="btn btn-primary btn-sm shadow-sm">
+            @if(auth()->user()->role == 'admin' && $biaya->status == 'Pending')
+                <form action="{{ route('biaya.approve', $biaya->id) }}" method="POST" class="d-inline" title="Setujui data ini">
+                    @csrf
+                    <button type="submit" class="btn btn-success btn-sm shadow-sm"><i class="fas fa-check fa-sm"></i> Setujui</button>
+                </form>
+            @endif
+            <a href="{{ route('biaya.print', $biaya->id) }}" target="_blank" class="btn btn-info btn-sm shadow-sm">
                 <i class="fas fa-print fa-sm"></i> Cetak Struk
             </a>
             <a href="{{ route('biaya.index') }}" class="btn btn-secondary btn-sm shadow-sm">
                 <i class="fas fa-arrow-left fa-sm"></i> Kembali
             </a>
         </div>
-
     </div>
 
     <div class="card shadow mb-4">
@@ -22,7 +26,8 @@
             <h6 class="m-0 font-weight-bold text-primary">Info Utama</h6>
         </div>
         <div class="card-body">
-            <div class="row">
+            <div class="row mb-4">
+                {{-- KOLOM KIRI (INFO UTAMA) --}}
                 <div class="col-md-6">
                     <table class="table table-borderless">
                         <tr>
@@ -35,14 +40,20 @@
                         </tr>
                         <tr>
                             <td><strong>Tgl. Transaksi</strong></td>
-                            <td>: {{ \Carbon\Carbon::parse($biaya->tgl_transaksi)->format('d F Y') }}</td>
+                            <td>: {{ $biaya->tgl_transaksi->format('d F Y') }}</td>
                         </tr>
                          <tr>
                             <td><strong>Bayar Dari</strong></td>
                             <td>: {{ $biaya->bayar_dari }}</td>
                         </tr>
+                         <tr>
+                            <td><strong>Cara Pembayaran</strong></td>
+                            <td>: {{ $biaya->cara_pembayaran }}</td>
+                        </tr>
                     </table>
                 </div>
+
+                {{-- KOLOM KANAN (INFO STATUS & TOTAL) --}}
                 <div class="col-md-6">
                     <table class="table table-borderless">
                         <tr>
@@ -56,6 +67,18 @@
                                     <span class="badge badge-danger">{{ $biaya->status }}</span>
                                 @endif
                             </td>
+                        </tr>
+                        @php
+                            $subtotal = $biaya->items->sum('jumlah');
+                            $taxAmount = $subtotal * ($biaya->tax_percentage / 100);
+                        @endphp
+                         <tr>
+                            <td><strong>Subtotal</strong></td>
+                            <td>: Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                         <tr>
+                            <td><strong>Pajak ({{ $biaya->tax_percentage }}%)</strong></td>
+                            <td>: Rp {{ number_format($taxAmount, 0, ',', '.') }}</td>
                         </tr>
                          <tr>
                             <td><strong>Grand Total</strong></td>
@@ -82,17 +105,14 @@
                         <tr>
                             <th>Akun Biaya (Kategori)</th>
                             <th>Deskripsi</th>
-                            <th>Pajak</th>
                             <th class="text-right">Jumlah</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {{-- LOOPING SEMUA RINCIAN --}}
                         @foreach($biaya->items as $item)
                         <tr>
                             <td>{{ $item->kategori }}</td>
                             <td>{{ $item->deskripsi ?? '-' }}</td>
-                            <td>{{ $item->pajak ?? 'Tidak ada' }}</td>
                             <td class="text-right">Rp {{ number_format($item->jumlah, 0, ',', '.') }}</td>
                         </tr>
                         @endforeach
@@ -122,24 +142,19 @@
                     @if($biaya->lampiran_path)
                         @php
                             $path = $biaya->lampiran_path;
-                            // Cek ekstensi file
                             $isImage = in_array(pathinfo($path, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
                         @endphp
-
                         @if($isImage)
-                            {{-- JIKA FILE GAMBAR: Tampilkan gambar --}}
                             <a href="{{ asset('storage/' . $path) }}" target="_blank">
                                 <img src="{{ asset('storage/' . $path) }}" alt="Lampiran" class="img-fluid rounded" style="max-height: 250px;">
                             </a>
                         @else
-                            {{-- JIKA BUKAN GAMBAR (PDF, DOC, ZIP): Tampilkan link --}}
                             <div class="alert alert-info d-flex align-items-center">
                                 <i class="fas fa-file-alt fa-2x mr-3"></i>
                                 <div>
                                     <strong>File terlampir:</strong>
                                     <br>
                                     <a href="{{ asset('storage/' . $path) }}" target="_blank">
-                                        {{-- Ambil nama file asli --}}
                                         {{ basename($path) }}
                                     </a>
                                 </div>

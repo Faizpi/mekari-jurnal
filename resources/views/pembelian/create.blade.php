@@ -70,7 +70,7 @@
                     </div>
                 </div>
 
-                {{-- TABEL PRODUK/JASA --}}
+                {{-- TABEL PRODUK/JASA (Sama seperti Penjualan) --}}
                 <div class="table-responsive mt-3">
                     <table class="table table-bordered">
                         <thead class="thead-light">
@@ -86,7 +86,6 @@
                             </tr>
                         </thead>
                         <tbody id="product-table-body">
-                            {{-- Tampilkan baris lama jika ada error validasi --}}
                             @if(old('produk_id'))
                                 @foreach(old('produk_id') as $index => $oldProdukId)
                                     <tr>
@@ -113,7 +112,6 @@
                                     </tr>
                                 @endforeach
                             @else
-                                {{-- Baris default --}}
                                 <tr>
                                     <td>
                                         <select class="form-control product-select" name="produk_id[]" required>
@@ -138,11 +136,9 @@
                     </table>
                 </div>
                 <button type="button" class="btn btn-link pl-0" id="add-product-row">+ Tambah Data</button>
-
                 @error('produk_id.*') <div class="text-danger small mt-2">Error di baris Produk: {{ $message }}</div> @enderror
                 @error('kuantitas.*') <div class="text-danger small mt-2">Error di baris Kuantitas: {{ $message }}</div> @enderror
                 @error('harga_satuan.*') <div class="text-danger small mt-2">Error di baris Harga: {{ $message }}</div> @enderror
-
 
                 {{-- BAGIAN BAWAH (MEMO & TOTAL) --}}
                 <div class="row mt-3">
@@ -162,11 +158,26 @@
                         </div>
                     </div>
                     <div class="col-md-6">
+                        {{-- TABEL TOTAL (DENGAN INPUT PAJAK MANUAL %) --}}
                         <table class="table table-borderless text-right">
                             <tbody>
                                 <tr>
                                     <td><strong>Subtotal</strong></td>
                                     <td id="subtotal-display">Rp0,00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Pajak (%)</strong></td>
+                                    <td style="width: 50%;">
+                                        <input type="number" class="form-control text-right @error('tax_percentage') is-invalid @enderror" 
+                                               id="tax_percentage_input" name="tax_percentage" value="{{ old('tax_percentage', 0) }}" min="0" step="0.01">
+                                        @error('tax_percentage') 
+                                            <div class="invalid-feedback d-block text-right">{{ $message }}</div> 
+                                        @enderror
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Jumlah Pajak</td>
+                                    <td id="tax-amount-display">Rp0,00</td>
                                 </tr>
                                 <tr class="border-top">
                                     <td class="h5"><strong>Total</strong></td>
@@ -187,12 +198,13 @@
 @endsection
 
 @push('scripts')
-{{-- JavaScript-nya persis sama dengan form Penjualan, hanya nama ID display total yang beda sedikit --}}
+{{-- JavaScript-nya persis sama dengan form Penjualan --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('product-table-body');
     const addRowBtn = document.getElementById('add-product-row');
-    
+    const taxInput = document.getElementById('tax_percentage_input');
+
     const productDropdownHtml = `
         <select class="form-control product-select" name="produk_id[]" required>
             <option value="">Pilih produk...</option>
@@ -204,9 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </select>
     `;
 
-    const formatRupiah = (angka) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-    };
+    const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
     const calculateRow = (row) => {
         const quantity = parseFloat(row.querySelector('.product-quantity').value) || 0;
@@ -223,9 +233,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const lineTotal = parseFloat(row.querySelector('.product-line-total').value) || 0;
             subtotal += lineTotal;
         });
+
+        let taxPercentage = parseFloat(taxInput.value) || 0;
+        let taxAmount = subtotal * (taxPercentage / 100);
+        const total = subtotal + taxAmount;
+        
         document.getElementById('subtotal-display').innerText = formatRupiah(subtotal);
-        document.getElementById('total-display').innerHTML = `<strong>${formatRupiah(subtotal)}</strong>`;
-        document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(subtotal)}`;
+        document.getElementById('tax-amount-display').innerText = formatRupiah(taxAmount);
+        document.getElementById('total-display').innerHTML = `<strong>${formatRupiah(total)}</strong>`;
+        document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(total)}`;
     };
 
     const handleProductChange = (event) => {
@@ -245,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    taxInput.addEventListener('input', calculateGrandTotal);
     tableBody.addEventListener('change', handleProductChange);
 
     addRowBtn.addEventListener('click', function () {

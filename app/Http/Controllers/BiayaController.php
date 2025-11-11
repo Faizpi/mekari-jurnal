@@ -75,12 +75,12 @@ class BiayaController extends Controller
         $request->validate([
             'bayar_dari' => 'required|string',
             'tgl_transaksi' => 'required|date',
-            'penerima' => 'nullable|string|max:255',
-            'kategori' => 'required|array',
-            'total' => 'required|array',
+            'tax_percentage' => 'required|numeric|min:0', // Validasi persentase
+            'lampiran' => 'nullable|file|mimes:jpg,png,pdf,zip,doc,docx|max:2048',
+            'kategori' => 'required|array|min:1',
+            'total' => 'required|array|min:1',
             'kategori.*' => 'required|string|max:255',
             'total.*' => 'required|numeric|min:0',
-            'lampiran' => 'nullable|file|mimes:jpg,png,pdf,zip,doc,docx|max:2048',
         ]);
 
         $path = null;
@@ -88,15 +88,20 @@ class BiayaController extends Controller
             $path = $request->file('lampiran')->store('lampiran_biaya', 'public');
         }
 
-        $grandTotal = 0;
+        // 2. Hitung Subtotal (dari item)
+        $subTotal = 0;
         foreach ($request->total as $index => $jumlah) {
-            $jumlah = $jumlah ?? 0;
-            $pajakRate = $request->pajak[$index] ?? 0;
-            $jumlahPajak = $jumlah * ($pajakRate / 100);
-            $totalAkhirBaris = $jumlah + $jumlahPajak;
-            $grandTotal += $totalAkhirBaris;
+            $subTotal += $jumlah ?? 0;
         }
+        
+        // 3. Ambil Persentase Pajak
+        $pajakPersen = $request->tax_percentage ?? 0;
 
+        // 4. Hitung Jumlah Pajak & Grand Total
+        $jumlahPajak = $subTotal * ($pajakPersen / 100);
+        $grandTotal = $subTotal + $jumlahPajak;
+
+        // 5. Buat Data Induk (Biaya)
         $biayaInduk = Biaya::create([
             'user_id' => Auth::id(),
             'status' => 'Pending',
@@ -108,20 +113,17 @@ class BiayaController extends Controller
             'tag' => $request->tag,
             'memo' => $request->memo,
             'lampiran_path' => $path,
+            'tax_percentage' => $pajakPersen, // Simpan persentasenya
             'grand_total' => $grandTotal,
         ]);
 
+        // 6. Looping untuk menyimpan Data Rincian (BiayaItem)
         foreach ($request->kategori as $index => $kategori) {
-            $jumlah = $request->total[$index] ?? 0;
-            $pajakRate = $request->pajak[$index] ?? 0;
-            $jumlahPajak = $jumlah * ($pajakRate / 100);
-
             BiayaItem::create([
                 'biaya_id' => $biayaInduk->id,
                 'kategori' => $kategori,
                 'deskripsi' => $request->deskripsi_akun[$index] ?? null,
-                'pajak' => $pajakRate > 0 ? "PPN 11%" : null,
-                'jumlah' => $jumlah + $jumlahPajak,
+                'jumlah' => $request->total[$index] ?? 0,
             ]);
         }
 
