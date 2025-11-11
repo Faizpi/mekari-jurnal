@@ -19,6 +19,7 @@ class Pembelian extends Model
         'memo',
         'lampiran_path',
         'status',
+        'grand_total',
         // 'total_barang' sudah dihapus dari $fillable karena pindah ke 'items'
     ];
 

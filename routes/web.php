@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BiayaController;      // <-- TAMBAHKAN INI
 use App\Http\Controllers\PenjualanController; // <-- TAMBAHKAN INI
 use App\Http\Controllers\PembelianController;
+use App\Http\Controllers\GudangController;    // <-- TAMBAHKAN INI
+use App\Http\Controllers\ProdukController;     // <-- TAMBAHKAN INI
+use App\Http\Controllers\StokController;       // <-- TAMBAHKAN INI
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +70,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('pembelian/{pembelian}/approve', [PembelianController::class, 'approve'])->name('pembelian.approve');
         Route::resource('gudang', 'GudangController');
         Route::resource('produk', 'ProdukController');
+        Route::get('stok', [StokController::class, 'index'])->name('stok.index');
+        Route::post('stok', [StokController::class, 'store'])->name('stok.store');
 
         Route::post('penjualan/{penjualan}/markaspaid', [PenjualanController::class, 'markAsPaid'])->name('penjualan.markAsPaid');
     });

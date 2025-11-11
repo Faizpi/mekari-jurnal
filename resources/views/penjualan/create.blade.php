@@ -7,9 +7,6 @@
         <h3 class="font-weight-bold text-right" id="grand-total-display">Total Rp0,00</h3>
     </div>
 
-    {{-- ====================================================== --}}
-    {{-- PERBAIKAN: Tambahkan enctype="multipart/form-data" --}}
-    {{-- ====================================================== --}}
     <form action="{{ route('penjualan.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="card shadow mb-4">
@@ -73,13 +70,13 @@
                             @error('no_referensi') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="form-group">
-                            <label for="tag">Tag</label>
-                            <input type="text" class="form-control @error('tag') is-invalid @enderror" id="tag" name="tag" value="{{ old('tag') }}">
+                            <label for="tag">Tag (Dibuat oleh)</label>
+                            <input type="text" class="form-control @error('tag') is-invalid @enderror" id="tag" name="tag" value="{{ old('tag', auth()->user()->name) }}" readonly>
                             @error('tag') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="form-group">
                             <label for="gudang">Gudang</label>
-                            <input type="text" class="form-control @error('gudang') is-invalid @enderror" id="gudang" name="gudang" value="{{ old('gudang') }}">
+                            <input type="text" class="form-control @error('gudang') is-invalid @enderror" id="gudang" name="gudang" value="{{ old('gudang', auth()->user()->gudang->nama_gudang ?? 'Tidak ada gudang') }}" readonly>
                             @error('gudang') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>
@@ -93,7 +90,7 @@
                                 <th style="width: 20%;">Produk</th>
                                 <th>Deskripsi</th>
                                 <th style="width: 8%;">Kuantitas</th>
-                                <th style="width: 10%;">Unit</th> {{-- Kolom ini ada di JS tapi tidak ada di @foreach old() --}}
+                                <th style="width: 10%;">Unit</th>
                                 <th style="width: 12%;">Harga Satuan</th>
                                 <th style="width: 10%;">Diskon (%)</th>
                                 <th class="text-right" style="width: 15%;">Jumlah</th>
@@ -102,15 +99,24 @@
                         </thead>
                         <tbody id="product-table-body">
                             {{-- Tampilkan baris lama jika ada error validasi --}}
-                            @if(old('produk'))
-                                @foreach(old('produk') as $index => $oldProduk)
+                            @if(old('produk_id'))
+                                @foreach(old('produk_id') as $index => $oldProdukId)
                                     <tr>
-                                        <td><input type="text" class="form-control" name="produk[]" value="{{ $oldProduk }}" required></td>
-                                        <td><input type="text" class="form-control" name="deskripsi[]" value="{{ old('deskripsi.'.$index) }}"></td>
+                                        <td>
+                                            <select class="form-control product-select @error('produk_id.'.$index) is-invalid @enderror" name="produk_id[]" required>
+                                                <option value="">Pilih produk...</option>
+                                                @foreach($produks as $produk)
+                                                    <option value="{{ $produk->id }}" 
+                                                            data-harga="{{ $produk->harga }}" 
+                                                            data-deskripsi="{{ $produk->deskripsi }}"
+                                                            {{ $oldProdukId == $produk->id ? 'selected' : '' }}>
+                                                        {{ $produk->nama_produk }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control product-description" name="deskripsi[]" value="{{ old('deskripsi.'.$index) }}"></td>
                                         <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="{{ old('kuantitas.'.$index) }}" min="1" required></td>
-                                        {{-- ====================================================== --}}
-                                        {{-- PERBAIKAN: Tambahkan input 'unit[]' yang hilang --}}
-                                        {{-- ====================================================== --}}
                                         <td><input type="text" class="form-control" name="unit[]" value="{{ old('unit.'.$index) }}"></td>
                                         <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" value="{{ old('harga_satuan.'.$index) }}" placeholder="0" required></td>
                                         <td><input type="number" class="form-control text-right product-discount" name="diskon[]" value="{{ old('diskon.'.$index) }}" placeholder="0" min="0" max="100"></td>
@@ -121,8 +127,18 @@
                             @else
                                 {{-- Baris default --}}
                                 <tr>
-                                    <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
-                                    <td><input type="text" class="form-control" name="deskripsi[]"></td>
+                                    <td>
+                                        <select class="form-control product-select @error('produk_id.0') is-invalid @enderror" name="produk_id[]" required>
+                                            <option value="">Pilih produk...</option>
+                                            @foreach($produks as $produk)
+                                                <option value="{{ $produk->id }}" data-harga="{{ $produk->harga }}" data-deskripsi="{{ $produk->deskripsi }}">
+                                                    {{ $produk->nama_produk }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('produk_id.0') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    </td>
+                                    <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
                                     <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
                                     <td><input type="text" class="form-control" name="unit[]"></td>
                                     <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0" required></td>
@@ -137,7 +153,7 @@
                 <button type="button" class="btn btn-link pl-0" id="add-product-row">+ Tambah Data</button>
 
                 {{-- Tampilkan pesan error untuk validasi array --}}
-                @error('produk.*') <div class="text-danger small mt-2">Error di baris Produk: {{ $message }}</div> @enderror
+                @error('produk_id.*') <div class="text-danger small mt-2">Error di baris Produk: {{ $message }}</div> @enderror
                 @error('kuantitas.*') <div class="text-danger small mt-2">Error di baris Kuantitas: {{ $message }}</div> @enderror
                 @error('harga_satuan.*') <div class="text-danger small mt-2">Error di baris Harga: {{ $message }}</div> @enderror
 
@@ -177,7 +193,6 @@
                         </table>
                     </div>
                 </div>
-
             </div>
         </div>
         <div class="mt-3 text-right">
@@ -194,6 +209,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('product-table-body');
     const addRowBtn = document.getElementById('add-product-row');
     
+    // Simpan HTML dropdown produk untuk baris baru
+    const productDropdownHtml = `
+        <select class="form-control product-select" name="produk_id[]" required>
+            <option value="">Pilih produk...</option>
+            @foreach($produks as $produk)
+                <option value="{{ $produk->id }}" data-harga="{{ $produk->harga }}" data-deskripsi="{{ $produk->deskripsi }}">
+                    {{ $produk->nama_produk }}
+                </option>
+            @endforeach
+        </select>
+    `;
+
     const formatRupiah = (angka) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
     };
@@ -219,17 +246,36 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(subtotal)}`;
     };
 
+    // --- FUNGSI AUTOFILL ---
+    const handleProductChange = (event) => {
+        if (!event.target.classList.contains('product-select')) return;
+
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        const row = event.target.closest('tr');
+
+        const harga = selectedOption.dataset.harga || 0;
+        const deskripsi = selectedOption.dataset.deskripsi || '';
+
+        row.querySelector('.product-price').value = harga;
+        row.querySelector('.product-description').value = deskripsi;
+        
+        calculateRow(row);
+    };
+
+    // --- EVENT LISTENERS ---
     tableBody.addEventListener('input', function(event) {
         if (event.target.classList.contains('product-quantity') || event.target.classList.contains('product-price') || event.target.classList.contains('product-discount')) {
             calculateRow(event.target.closest('tr'));
         }
     });
 
+    tableBody.addEventListener('change', handleProductChange);
+
     addRowBtn.addEventListener('click', function () {
         const newRow = tableBody.insertRow();
         newRow.innerHTML = `
-            <td><input type="text" class="form-control" name="produk[]" placeholder="Ketik nama produk..." required></td>
-            <td><input type="text" class="form-control" name="deskripsi[]"></td>
+            <td>${productDropdownHtml}</td>
+            <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
             <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
             <td><input type="text" class="form-control" name="unit[]"></td>
             <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0" required></td>
@@ -249,6 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Hitung total saat halaman dimuat (untuk data 'old' jika ada)
     tableBody.querySelectorAll('tr').forEach(row => calculateRow(row));
 
+    // Script untuk nama file
     document.querySelectorAll('.custom-file-input').forEach(input => {
         input.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {

@@ -14,6 +14,9 @@ class PembelianItem extends Model
         'deskripsi',
         'kuantitas',
         'unit',
+        'harga_satuan', // <-- TAMBAHKAN INI
+        'diskon',       // <-- TAMBAHKAN INI
+        'jumlah_baris', // <-- TAMBAHKAN INI
     ];
 
     public function pembelian()

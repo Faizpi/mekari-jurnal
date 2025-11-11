@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Penjualan;
 use App\PenjualanItem; // Pastikan ini ada
 use App\User; // Pastikan namespace Model Anda benar (App\ atau App\Models\)
+use App\Produk;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -56,7 +57,8 @@ class PenjualanController extends Controller
      */
     public function create()
     {
-        return view('penjualan.create');
+        $produks = Produk::all(); // Ambil semua data produk
+        return view('penjualan.create', compact('produks'));
     }
 
     /**

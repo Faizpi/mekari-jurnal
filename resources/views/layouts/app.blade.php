@@ -75,6 +75,11 @@
                     <a class="nav-link" href="{{ route('produk.index') }}">
                         <i class="fas fa-fw fa-boxes"></i><span>Master Produk</span></a>
                 </li>
+
+                <li class="nav-item {{ Route::is('stok.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('stok.index') }}">
+                        <i class="fas fa-fw fa-cubes"></i><span>Master Stok</span></a>
+                </li>
             @endif
 
             <hr class="sidebar-divider d-none d-md-block">
