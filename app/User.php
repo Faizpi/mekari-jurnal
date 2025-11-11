@@ -16,7 +16,8 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', 'role', // Pastikan 'role' ada di sini
+        'name', 'email', 'password', 'role',
+        'alamat', 'no_telp', 'gudang_id', // Pastikan 'role' ada di sini
     ];
 
     /**
@@ -36,6 +37,11 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function gudang()
+    {
+        return $this->belongsTo(Gudang::class);
+    }
 
     public function penjualans()
     {

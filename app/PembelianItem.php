@@ -10,7 +10,7 @@ class PembelianItem extends Model
 
     protected $fillable = [
         'pembelian_id',
-        'produk',
+        'produk_id',
         'deskripsi',
         'kuantitas',
         'unit',
@@ -19,5 +19,10 @@ class PembelianItem extends Model
     public function pembelian()
     {
         return $this->belongsTo(Pembelian::class);
+    }
+
+    public function produk()
+    {
+        return $this->belongsTo(Produk::class);
     }
 }

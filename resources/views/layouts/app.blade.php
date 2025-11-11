@@ -65,6 +65,16 @@
                     <a class="nav-link" href="{{ route('users.index') }}">
                         <i class="fas fa-fw fa-users-cog"></i><span>User Management</span></a>
                 </li>
+
+                <li class="nav-item {{ Route::is('gudang.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('gudang.index') }}">
+                        <i class="fas fa-fw fa-warehouse"></i><span>Master Gudang</span></a>
+                </li>
+
+                <li class="nav-item {{ Route::is('produk.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('produk.index') }}">
+                        <i class="fas fa-fw fa-boxes"></i><span>Master Produk</span></a>
+                </li>
             @endif
 
             <hr class="sidebar-divider d-none d-md-block">

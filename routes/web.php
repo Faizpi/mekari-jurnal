@@ -65,6 +65,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('biaya/{biaya}/approve', [BiayaController::class, 'approve'])->name('biaya.approve');
         Route::post('penjualan/{penjualan}/approve', [PenjualanController::class, 'approve'])->name('penjualan.approve');
         Route::post('pembelian/{pembelian}/approve', [PembelianController::class, 'approve'])->name('pembelian.approve');
+        Route::resource('gudang', 'GudangController');
+        Route::resource('produk', 'ProdukController');
 
         Route::post('penjualan/{penjualan}/markaspaid', [PenjualanController::class, 'markAsPaid'])->name('penjualan.markAsPaid');
     });

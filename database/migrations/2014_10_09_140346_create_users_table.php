@@ -14,14 +14,22 @@ class CreateUsersTable extends Migration
     public function up()
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id(); // Membuat kolom id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY
-            $table->string('name'); // Membuat kolom name VARCHAR(255)
-            $table->string('email')->unique(); // Membuat kolom email VARCHAR(255) yang unik
-            $table->timestamp('email_verified_at')->nullable(); // Kolom untuk verifikasi email
-            $table->string('password'); // Membuat kolom password VARCHAR(255)
-            $table->string('role')->default('user'); // Kolom role dengan nilai default 'user'
-            $table->rememberToken(); // Kolom remember_token VARCHAR(100) untuk "remember me"
-            $table->timestamps(); // Membuat kolom created_at dan updated_at
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('role')->default('user');
+
+            // --- KOLOM BARU ---
+            $table->string('alamat')->nullable();
+            $table->string('no_telp')->nullable();
+            $table->unsignedBigInteger('gudang_id')->nullable(); // User bisa 'tidak memegang' gudang (misal admin utama)
+            $table->foreign('gudang_id')->references('id')->on('gudangs');
+            // --------------------
+
+            $table->rememberToken();
+            $table->timestamps();
         });
     }
 
