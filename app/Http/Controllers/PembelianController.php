@@ -4,15 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Pembelian;
 use App\PembelianItem;
-use App\Produk; // <-- Tambahkan ini
+use App\Produk;
+use App\GudangProduk; // <-- TAMBAHKAN INI
 use App\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB; // <-- TAMBAHKAN INI
 
 class PembelianController extends Controller
 {
+    // ... (method index, create, store, show, edit, update, destroy tidak berubah) ...
+    
     /**
      * Menampilkan daftar pembelian (berdasarkan role).
      */
@@ -24,20 +28,12 @@ class PembelianController extends Controller
         } else {
             $query = Pembelian::where('user_id', Auth::id())->with('user');
         }
-
         $allPembelian = $query->latest()->get();
-
-        // Kalkulasi Kartu Ringkasan (sekarang pakai grand_total)
-        $fakturBelumDibayar = (clone $query)
-            ->whereIn('status', ['Pending', 'Approved'])
-            ->sum('grand_total'); // <-- Diubah
-
-        $fakturTelatBayar = (clone $query)
-            ->where('status', 'Approved')
-            ->whereNotNull('tgl_jatuh_tempo')
-            ->where('tgl_jatuh_tempo', '<', Carbon::now())
-            ->sum('grand_total'); // <-- Diubah
-
+        $fakturBelumDibayar = (clone $query)->whereIn('status', ['Pending', 'Approved'])->sum('grand_total');
+        $fakturTelatBayar = (clone $query)->where('status', 'Approved')
+                                          ->whereNotNull('tgl_jatuh_tempo')
+                                          ->where('tgl_jatuh_tempo', '<', Carbon::now())
+                                          ->sum('grand_total');
         return view('pembelian.index', [
             'pembelians' => $allPembelian,
             'fakturBelumDibayar' => $fakturBelumDibayar,
@@ -50,7 +46,7 @@ class PembelianController extends Controller
      */
     public function create()
     {
-        $produks = Produk::all(); // Ambil produk untuk dropdown
+        $produks = Produk::all();
         return view('pembelian.create', compact('produks'));
     }
 
@@ -64,23 +60,19 @@ class PembelianController extends Controller
             'tgl_transaksi' => 'required|date',
             'urgensi' => 'required|string',
             'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048',
-            
             'produk_id' => 'required|array|min:1',
             'kuantitas' => 'required|array|min:1',
             'harga_satuan' => 'required|array|min:1',
-            
             'produk_id.*' => 'required|exists:produks,id',
             'kuantitas.*' => 'required|numeric|min:1',
             'harga_satuan.*' => 'required|numeric|min:0',
         ]);
 
-        // 1. Proses upload file
         $path = null;
         if ($request->hasFile('lampiran')) {
             $path = $request->file('lampiran')->store('lampiran_pembelian', 'public');
         }
 
-        // 2. Hitung Grand Total
         $grandTotal = 0;
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
@@ -90,7 +82,6 @@ class PembelianController extends Controller
             $grandTotal += $jumlah_baris;
         }
 
-        // 3. Buat Data Induk (Pembelian)
         $pembelianInduk = Pembelian::create([
             'user_id' => Auth::id(),
             'status' => 'Pending',
@@ -106,7 +97,6 @@ class PembelianController extends Controller
             'grand_total' => $grandTotal,
         ]);
 
-        // 4. Looping untuk menyimpan Data Rincian (PembelianItem)
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
             $price = $request->harga_satuan[$index] ?? 0;
@@ -136,7 +126,7 @@ class PembelianController extends Controller
         if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
             return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
-        $pembelian->load('items', 'user', 'items.produk'); // Muat relasi
+        $pembelian->load('items', 'user', 'items.produk');
         return view('pembelian.show', compact('pembelian'));
     }
 
@@ -149,7 +139,6 @@ class PembelianController extends Controller
              return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
         $produks = Produk::all();
-        // Muat rincian item agar bisa diedit (lebih kompleks, kita sederhanakan dulu)
         $pembelian->load('items');
         return view('pembelian.edit', compact('pembelian', 'produks'));
     }
@@ -159,12 +148,12 @@ class PembelianController extends Controller
      */
     public function update(Request $request, Pembelian $pembelian)
     {
+        // (Logika update yang lengkap untuk induk-rincian lebih kompleks,
+        // kita fokus ke approve dulu)
         if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
              return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
         
-        // (Logika update untuk form induk-rincian lebih kompleks, 
-        // kita update data induknya dulu)
         $request->validate([
             'staf_penyetuju' => 'required|string|max:255',
             'tgl_transaksi' => 'required|date',
@@ -173,6 +162,7 @@ class PembelianController extends Controller
         ]);
 
         $pembelian->update($request->all());
+
         return redirect()->route('pembelian.index')->with('success', 'Data pembelian berhasil diperbarui.');
     }
 
@@ -190,28 +180,70 @@ class PembelianController extends Controller
     }
 
     /**
-     * Menyetujui data pembelian.
+     * Menampilkan halaman print struk untuk pembelian.
+     */
+    public function print(Pembelian $pembelian)
+    {
+        // Keamanan
+        if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
+            return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
+        }
+
+        $pembelian->load('items', 'user', 'items.produk');
+
+        // PASTIKAN BARIS INI MENGEMBALIKAN 'view'
+        return view('pembelian.print', compact('pembelian'));
+    }
+    
+    // ======================================================
+    // LOGIKA INVENTARIS BARU
+    // ======================================================
+    /**
+     * Menyetujui data pembelian DAN MENAMBAH STOK.
      */
     public function approve(Pembelian $pembelian)
     {
         if (auth()->user()->role != 'admin') {
              return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
-        $pembelian->status = 'Approved';
-        $pembelian->save();
-        return redirect()->route('pembelian.index')->with('success', 'Data pembelian berhasil disetujui.');
-    }
 
-    /**
-     * Menampilkan halaman print struk untuk pembelian.
-     */
-    public function print(Pembelian $pembelian)
-    {
-        if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
-            return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
+        // 1. Dapatkan gudang dari user yang MEMBUAT permintaan
+        $userGudang = $pembelian->user->gudang_id;
+        if (!$userGudang) {
+            return redirect()->route('pembelian.index')->with('error', 'Gagal! User pembuat tidak terhubung ke gudang manapun.');
         }
 
-        $pembelian->load('items', 'user', 'items.produk');
-        return view('pembelian.print', compact('pembelian'));
+        // 2. Gunakan DB Transaction agar aman (jika satu gagal, semua batal)
+        DB::beginTransaction();
+        try {
+            // 3. Loop setiap item dalam pembelian ini
+            foreach ($pembelian->items as $item) {
+                // 4. Cari atau buat data stok untuk produk ini di gudang ini
+                $stok = GudangProduk::firstOrCreate(
+                    [
+                        'gudang_id' => $userGudang,
+                        'produk_id' => $item->produk_id
+                    ],
+                    ['stok' => 0] // Buat stok 0 jika belum ada
+                );
+
+                // 5. TAMBAH stok
+                $stok->increment('stok', $item->kuantitas);
+            }
+
+            // 6. Update status pembelian menjadi 'Approved'
+            $pembelian->status = 'Approved';
+            $pembelian->save();
+
+            // 7. Jika semua berhasil, simpan perubahan
+            DB::commit();
+
+            return redirect()->route('pembelian.index')->with('success', 'Pembelian disetujui. Stok telah ditambahkan ke gudang.');
+
+        } catch (\Exception $e) {
+            // 8. Jika ada error, batalkan semua
+            DB::rollBack();
+            return redirect()->route('pembelian.index')->with('error', 'Error! Gagal memperbarui stok. ' . $e->getMessage());
+        }
     }
 }

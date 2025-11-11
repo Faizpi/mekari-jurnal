@@ -3,16 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Penjualan;
-use App\PenjualanItem; // Pastikan ini ada
-use App\User; // Pastikan namespace Model Anda benar (App\ atau App\Models\)
+use App\PenjualanItem;
 use App\Produk;
+use App\GudangProduk; // <-- TAMBAHKAN INI
+use App\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB; // <-- TAMBAHKAN INI
 
 class PenjualanController extends Controller
 {
+    // ... (method index, create, store, show, edit, update, destroy, print tidak berubah) ...
+
     /**
      * Menampilkan daftar penjualan (berdasarkan role).
      */
@@ -24,26 +28,15 @@ class PenjualanController extends Controller
         } else {
             $query = Penjualan::where('user_id', Auth::id())->with('user');
         }
-
-        // Kalkulasi untuk Kartu Ringkasan
-        $totalBelumDibayar = (clone $query)
-            ->whereIn('status', ['Pending', 'Approved']) // Status "Belum Dibayar" mencakup Pending DAN Approved
-            ->sum('grand_total');
-
-        $totalTelatDibayar = (clone $query)
-            ->where('status', 'Approved') // Hanya yang sudah disetujui yang bisa telat
-            ->whereNotNull('tgl_jatuh_tempo')
-            ->where('tgl_jatuh_tempo', '<', Carbon::now())
-            ->sum('grand_total');
-
-        $pelunasan30Hari = (clone $query)
-            ->where('status', 'Lunas')
-            ->where('updated_at', '>=', Carbon::now()->subDays(30))
-            ->sum('grand_total');
-
-        // Ambil data untuk tabel
+        $totalBelumDibayar = (clone $query)->whereIn('status', ['Pending', 'Approved'])->sum('grand_total');
+        $totalTelatDibayar = (clone $query)->where('status', 'Approved')
+                                          ->whereNotNull('tgl_jatuh_tempo')
+                                          ->where('tgl_jatuh_tempo', '<', Carbon::now())
+                                          ->sum('grand_total');
+        $pelunasan30Hari = (clone $query)->where('status', 'Lunas')
+                                        ->where('updated_at', '>=', Carbon::now()->subDays(30))
+                                        ->sum('grand_total');
         $allPenjualan = $query->latest()->get();
-
         return view('penjualan.index', [
             'penjualans' => $allPenjualan,
             'totalBelumDibayar' => $totalBelumDibayar,
@@ -57,7 +50,7 @@ class PenjualanController extends Controller
      */
     public function create()
     {
-        $produks = Produk::all(); // Ambil semua data produk
+        $produks = Produk::all();
         return view('penjualan.create', compact('produks'));
     }
 
@@ -66,49 +59,25 @@ class PenjualanController extends Controller
      */
     public function store(Request $request)
     {
-        // Validasi lengkap
         $request->validate([
-            // Validasi field utama
             'pelanggan' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'alamat_penagihan' => 'nullable|string',
             'tgl_transaksi' => 'required|date',
-            'tgl_jatuh_tempo' => 'nullable|date|after_or_equal:tgl_transaksi',
-            'syarat_pembayaran' => 'nullable|string|max:255',
-            'no_referensi' => 'nullable|string|max:255',
-            'tag' => 'nullable|string|max:255',
-            'gudang' => 'nullable|string|max:255',
-            'memo' => 'nullable|string',
-            
-            // Validasi file
-            'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048', // 2MB Max
-            
-            // Validasi Array
-            'produk' => 'required|array|min:1',
-            'deskripsi' => 'nullable|array',
+            'produk_id' => 'required|array|min:1',
             'kuantitas' => 'required|array|min:1',
-            'unit' => 'nullable|array',
             'harga_satuan' => 'required|array|min:1',
-            'diskon' => 'nullable|array',
-            
-            // Validasi setiap item di dalam array
-            'produk.*' => 'required|string|max:255',
-            'deskripsi.*' => 'nullable|string',
+            'produk_id.*' => 'required|exists:produks,id',
             'kuantitas.*' => 'required|numeric|min:1',
-            'unit.*' => 'nullable|string',
             'harga_satuan.*' => 'required|numeric|min:0',
-            'diskon.*' => 'nullable|numeric|min:0|max:100',
+            'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048',
         ]);
 
-        // 1. Proses upload file
         $path = null;
         if ($request->hasFile('lampiran')) {
             $path = $request->file('lampiran')->store('lampiran_penjualan', 'public');
         }
 
-        // 2. Hitung Grand Total
         $grandTotal = 0;
-        foreach ($request->produk as $index => $produk) {
+        foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
             $price = $request->harga_satuan[$index] ?? 0;
             $discount = $request->diskon[$index] ?? 0;
@@ -116,7 +85,6 @@ class PenjualanController extends Controller
             $grandTotal += $jumlah_baris;
         }
 
-        // 3. Buat Data Induk (Penjualan)
         $penjualanInduk = Penjualan::create([
             'user_id' => Auth::id(),
             'status' => 'Pending',
@@ -134,8 +102,7 @@ class PenjualanController extends Controller
             'grand_total' => $grandTotal,
         ]);
 
-        // 4. Looping untuk menyimpan Data Rincian (PenjualanItem)
-        foreach ($request->produk as $index => $produk) {
+        foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
             $price = $request->harga_satuan[$index] ?? 0;
             $discount = $request->diskon[$index] ?? 0;
@@ -143,7 +110,7 @@ class PenjualanController extends Controller
 
             PenjualanItem::create([
                 'penjualan_id' => $penjualanInduk->id,
-                'produk' => $produk,
+                'produk_id' => $produkId,
                 'deskripsi' => $request->deskripsi[$index] ?? null,
                 'kuantitas' => $quantity,
                 'unit' => $request->unit[$index] ?? null,
@@ -164,25 +131,20 @@ class PenjualanController extends Controller
         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
             return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
-        $penjualan->load('items', 'user');
+        $penjualan->load('items', 'user', 'items.produk');
         return view('penjualan.show', compact('penjualan'));
     }
 
     /**
      * Menampilkan form edit.
-     * (Saat ini hanya edit data induk)
      */
     public function edit(Penjualan $penjualan)
     {
         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
              return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
-         // Hanya user yang statusnya masih Pending yang bisa edit
-         if ($penjualan->status != 'Pending' && auth()->user()->role != 'admin') {
-            return redirect()->route('penjualan.index')->with('error', 'Data yang sudah disetujui tidak bisa diedit.');
-         }
-
-        return view('penjualan.edit', compact('penjualan'));
+        $produks = Produk::all();
+        return view('penjualan.edit', compact('penjualan', 'produks'));
     }
 
     /**
@@ -198,7 +160,6 @@ class PenjualanController extends Controller
             'pelanggan' => 'required|string|max:255',
             'tgl_transaksi' => 'required|date',
             'status' => 'required|string',
-            // validasi lainnya jika diperlukan
         ]);
         
         $penjualan->update($request->all());
@@ -213,28 +174,26 @@ class PenjualanController extends Controller
         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
              return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
-
-        // Hanya data pending yang boleh dihapus user
-        if ($penjualan->status != 'Pending' && auth()->user()->role != 'admin') {
-            return redirect()->route('penjualan.index')->with('error', 'Data yang sudah diproses tidak bisa dihapus.');
-         }
         
         $penjualan->delete();
         return redirect()->route('penjualan.index')->with('success', 'Data penjualan berhasil dihapus.');
     }
 
     /**
-     * Menyetujui data penjualan (Admin).
+     * Menampilkan halaman print struk untuk penjualan.
      */
-    public function approve(Penjualan $penjualan)
-    {
-        if (auth()->user()->role != 'admin') {
-             return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+    public function print(Penjualan $penjualan)
+        {
+            // Keamanan
+            if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
+                return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+            }
+
+            $penjualan->load('items', 'user', 'items.produk');
+
+            // PASTIKAN BARIS INI MENGEMBALIKAN 'view', BUKAN '$penjualan'
+            return view('penjualan.print', compact('penjualan'));
         }
-        $penjualan->status = 'Approved';
-        $penjualan->save();
-        return redirect()->route('penjualan.index')->with('success', 'Data penjualan berhasil disetujui.');
-    }
 
     /**
      * Menandai data sebagai Lunas (Admin).
@@ -244,24 +203,63 @@ class PenjualanController extends Controller
         if (auth()->user()->role != 'admin') {
              return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
-        
         $penjualan->status = 'Lunas';
         $penjualan->save();
-
         return redirect()->route('penjualan.index')->with('success', 'Penjualan telah ditandai LUNAS.');
     }
-
+    
+    // ======================================================
+    // LOGIKA INVENTARIS BARU
+    // ======================================================
     /**
-     * Menampilkan halaman print struk untuk penjualan.
+     * Menyetujui data penjualan DAN MENGURANGI STOK.
      */
-    public function print(Penjualan $penjualan)
+    public function approve(Penjualan $penjualan)
     {
-        // Keamanan
-        if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
-            return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+        if (auth()->user()->role != 'admin') {
+             return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
 
-        $penjualan->load('items', 'user');
-        return view('penjualan.print', compact('penjualan'));
+        // 1. Dapatkan gudang dari user yang MEMBUAT penjualan
+        $userGudang = $penjualan->user->gudang_id;
+        if (!$userGudang) {
+            return redirect()->route('penjualan.index')->with('error', 'Gagal! User pembuat tidak terhubung ke gudang manapun.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 2. Loop setiap item dalam penjualan
+            foreach ($penjualan->items as $item) {
+                // 3. Cari data stok
+                $stok = GudangProduk::where('gudang_id', $userGudang)
+                                    ->where('produk_id', $item->produk_id)
+                                    ->first();
+
+                // 4. Validasi Stok
+                if (!$stok || $stok->stok < $item->kuantitas) {
+                    // Jika stok tidak ada atau tidak cukup, batalkan semua
+                    DB::rollBack();
+                    $namaProduk = $item->produk->nama_produk ?? 'ID: ' . $item->produk_id;
+                    return redirect()->route('penjualan.index')->with('error', "Stok tidak cukup untuk produk: $namaProduk. Transaksi dibatalkan.");
+                }
+
+                // 5. KURANGI stok
+                $stok->decrement('stok', $item->kuantitas);
+            }
+
+            // 6. Update status penjualan menjadi 'Approved'
+            $penjualan->status = 'Approved';
+            $penjualan->save();
+
+            // 7. Simpan perubahan
+            DB::commit();
+
+            return redirect()->route('penjualan.index')->with('success', 'Penjualan disetujui. Stok telah dikurangi dari gudang.');
+
+        } catch (\Exception $e) {
+            // 8. Jika ada error lain
+            DB::rollBack();
+            return redirect()->route('penjualan.index')->with('error', 'Error! Gagal memperbarui stok. ' . $e->getMessage());
+        }
     }
 }

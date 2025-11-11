@@ -15,7 +15,7 @@
         }
         body {
             width: 56mm;
-            margin: 1.5rem auto !important;;
+            margin: 0;
             padding: 0;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 9pt;
@@ -55,41 +55,49 @@
             width: 36%;
         }
         
-        /* Tabel Item */
+        /* Item Table */
         .item-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
-        }
-        .item-table th {
             font-size: 9pt;
-            text-align: left;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 2px;
         }
-        .item-table th.text-right {
-            text-align: right;
-            padding-right: 1mm;
+        .item-table thead {
+            display: none;
         }
         .item-table td {
             vertical-align: top;
-            padding: 3px 0;
-            border-bottom: 1px solid #eee;
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee;
         }
         .item-name {
             font-weight: bold;
             word-wrap: break-word;
             line-height: 1.2em;
         }
-        .item-details {
-            font-size: 8pt;
+        /* Rincian */
+        .receipt-details-table {
+            width: 100%;
+            margin-top: 3px;
+            border-collapse: collapse;
+            font-size: 9pt;
         }
-        .item-qty {
+        .receipt-details-table td {
+            padding: 1.5px 0;
+            vertical-align: top;
+            border: none;
+        }
+        .receipt-details-table .label {
+            width: 40%;
+            text-align: left;
+        }
+        .receipt-details-table .value {
+            width: 60%;
             text-align: right;
-            white-space: nowrap;
             padding-right: 1mm;
+            white-space: nowrap;
         }
-
+        
         /* Total */
         .total-table {
             width: 100%;
@@ -99,14 +107,21 @@
         }
         .total-table td {
             padding: 1.5px 0;
-            font-weight: bold;
         }
-        .total-table .text-right {
+        .text-right {
             text-align: right;
             white-space: nowrap;
             padding-right: 1mm;
         }
-
+        .grand-total {
+            font-size: 11pt;
+            font-weight: bold;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding-top: 3px;
+            padding-bottom: 3px;
+        }
+        
         /* Footer */
         .footer {
             text-align: center;
@@ -134,30 +149,47 @@
             <tr><td>Dibuat oleh</td><td>: {{ $pembelian->user->name }}</td></tr>
             <tr><td>Urgensi</td><td>: {{ $pembelian->urgensi }}</td></tr>
             <tr><td>Status</td><td>: {{ $pembelian->status }}</td></tr>
+            {{-- =================================== --}}
+            {{-- TAMBAHAN INFO BARU --}}
+            {{-- =================================== --}}
+            <tr><td>Tag</td><td>: {{ $pembelian->tag ?? '-' }}</td></tr>
+            <tr><td>Gudang</td><td>: {{ $pembelian->user->gudang->nama_gudang ?? '-' }}</td></tr>
+            <tr><td>Anggaran</td><td>: {{ $pembelian->tahun_anggaran ?? '-' }}</td></tr>
         </table>
 
         <hr class="divider">
 
         <table class="item-table">
-            <thead>
-                <tr>
-                    <th>Produk</th>
-                    <th class="text-right">Qty</th>
-                </tr>
-            </thead>
             <tbody>
-                @php $totalBarang = 0; @endphp
                 @foreach($pembelian->items as $item)
-                @php $totalBarang += $item->kuantitas; @endphp
                 <tr>
-                    <td>
-                        <div class="item-name">{{ $item->produk }}</div>
-                        @if($item->deskripsi)
-                            <div class="item-details">({{ $item->deskripsi }})</div>
-                        @endif
-                    </td>
-                    <td class="item-qty">
-                        {{ $item->kuantitas }} {{ $item->unit ?? 'pcs' }}
+                    <td class="item-name-details">
+                        {{-- Tampilkan Item Code --}}
+                        <div class="item-name">{{ $item->produk->nama_produk }} ({{ $item->produk->item_code }})</div>
+                        <table class="details-table">
+                            <tr>
+                                <td class="label">Qty</td>
+                                <td class="value">{{ $item->kuantitas }}</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Unit</td>
+                                <td class="value">{{ $item->unit ?? 'pcs' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Harga</td>
+                                <td class="value">Rp{{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
+                            </tr>
+                            @if($item->diskon > 0)
+                            <tr>
+                                <td class="label">Diskon</td>
+                                <td class="value">{{ $item->diskon }}%</td>
+                            </tr>
+                            @endif
+                            <tr>
+                                <td class="label">Jumlah</td>
+                                <td class="value">Rp{{ number_format($item->jumlah_baris, 0, ',', '.') }}</td>
+                            </tr>
+                        </table>
                     </td>
                 </tr>
                 @endforeach
@@ -168,8 +200,12 @@
 
         <table class="total-table">
             <tr>
-                <td>Total Barang</td>
-                <td class="text-right">{{ $totalBarang }}</td>
+                <td>Subtotal</td>
+                <td class="text-right">Rp{{ number_format($pembelian->items->sum('jumlah_baris'), 0, ',', '.') }}</td>
+            </tr>
+            <tr class="grand-total">
+                <td>GRAND TOTAL</td>
+                <td class="text-right">Rp{{ number_format($pembelian->grand_total, 0, ',', '.') }}</td>
             </tr>
         </table>
 

@@ -6,8 +6,13 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Detail Pembelian #PR-{{ $pembelian->id }}</h1>
         <div>
-            {{-- TAMBAHKAN TOMBOL INI --}}
-            <a href="{{ route('pembelian.print', $pembelian->id) }}" target="_blank" class="btn btn-primary btn-sm shadow-sm">
+            @if(auth()->user()->role == 'admin' && $pembelian->status == 'Pending')
+                <form action="{{ route('pembelian.approve', $pembelian->id) }}" method="POST" class="d-inline" title="Setujui data ini">
+                    @csrf
+                    <button type="submit" class="btn btn-success btn-sm shadow-sm"><i class="fas fa-check fa-sm"></i> Setujui</button>
+                </form>
+            @endif
+            <a href="{{ route('pembelian.print', $pembelian->id) }}" target="_blank" class="btn btn-info btn-sm shadow-sm">
                 <i class="fas fa-print fa-sm"></i> Cetak Struk
             </a>
             <a href="{{ route('pembelian.index') }}" class="btn btn-secondary btn-sm shadow-sm">
@@ -27,7 +32,7 @@
                         <tr><td style="width: 30%;"><strong>Pembuat</strong></td><td>: {{ $pembelian->user->name }}</td></tr>
                         <tr><td><strong>Staf Penyetuju</strong></td><td>: {{ $pembelian->staf_penyetuju }}</td></tr>
                         <tr><td><strong>Email Penyetuju</strong></td><td>: {{ $pembelian->email_penyetuju ?? '-' }}</td></tr>
-                        <tr><td><strong>Tgl. Transaksi</strong></td><td>: {{ \Carbon\Carbon::parse($pembelian->tgl_transaksi)->format('d F Y') }}</td></tr>
+                        <tr><td><strong>Tgl. Transaksi</strong></td><td>: {{ \Carbon\Carbon::parse($pembelian->tgl_transaksi)->format('d F Y H:i') }}</td></tr>
                         <tr><td><strong>Tgl. Jatuh Tempo</strong></td><td>: {{ $pembelian->tgl_jatuh_tempo ? \Carbon\Carbon::parse($pembelian->tgl_jatuh_tempo)->format('d F Y') : '-' }}</td></tr>
                     </table>
                 </div>
@@ -44,6 +49,10 @@
                                     <span class="badge badge-danger">{{ $pembelian->status }}</span>
                                 @endif
                             </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Grand Total</strong></td>
+                            <td>: <h4 class="font-weight-bold text-primary">Rp {{ number_format($pembelian->grand_total, 0, ',', '.') }}</h4></td>
                         </tr>
                          <tr><td><strong>Urgensi</strong></td><td>: {{ $pembelian->urgensi }}</td></tr>
                          <tr><td><strong>Tahun Anggaran</strong></td><td>: {{ $pembelian->tahun_anggaran ?? '-' }}</td></tr>
@@ -66,16 +75,20 @@
                             <th>Produk</th>
                             <th>Deskripsi</th>
                             <th class="text-center">Kuantitas</th>
-                            <th class="text-center">Unit</th>
+                            <th class="text-right">Harga Satuan</th>
+                            <th class="text-center">Diskon (%)</th>
+                            <th class="text-right">Jumlah</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($pembelian->items as $item)
                         <tr>
-                            <td>{{ $item->produk }}</td>
+                            <td>{{ $item->produk->nama_produk }}</td>
                             <td>{{ $item->deskripsi ?? '-' }}</td>
                             <td class="text-center">{{ $item->kuantitas }}</td>
-                            <td class="text-center">{{ $item->unit ?? '-' }}</td>
+                            <td class="text-right">Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
+                            <td class="text-center">{{ $item->diskon }}%</td>
+                            <td class="text-right">Rp {{ number_format($item->jumlah_baris, 0, ',', '.') }}</td>
                         </tr>
                         @endforeach
                     </tbody>

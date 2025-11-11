@@ -30,7 +30,8 @@
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             Faktur Belum Dibayar</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $fakturBelumDibayar }}</div>
+                        {{-- (Nilai ini dihitung dari grand_total di controller) --}}
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($fakturBelumDibayar, 0, ',', '.') }}</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-file-invoice fa-2x text-gray-300"></i>
@@ -46,7 +47,7 @@
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
                             Faktur Telat Dibayar</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $fakturTelatBayar }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($fakturTelatBayar, 0, ',', '.') }}</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
@@ -71,6 +72,7 @@
                         <th>Pembuat</th>
                         <th>Staf Penyetuju</th>
                         <th>Urgensi</th>
+                        <th class="text-right">Grand Total</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Aksi</th>
                     </tr>
@@ -87,6 +89,7 @@
                         <td>{{ $item->user->name }}</td>
                         <td>{{ $item->staf_penyetuju }}</td>
                         <td>{{ $item->urgensi }}</td>
+                        <td class="text-right font-weight-bold">Rp {{ number_format($item->grand_total, 0, ',', '.') }}</td>
                         <td class="text-center">
                              @if($item->status == 'Approved')
                                 <span class="badge badge-success">{{ $item->status }}</span>
@@ -122,7 +125,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center">Belum ada data permintaan pembelian.</td>
+                        <td colspan="8" class="text-center">Belum ada data permintaan pembelian.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -152,7 +155,7 @@
 @push('scripts')
 <script>
     $('#deleteModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget); 
+        var button = $(event->relatedTarget); 
         var action = button.data('action'); 
         var modal = $(this);
         modal.find('#deleteForm').attr('action', action);

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Struk Penjualan #{{ $penjualan->id }}</title>
     <style>
-        /* ... (Semua kode CSS 58mm Anda tidak berubah) ... */
         @page { size: 58mm; margin: 0; }
         @media screen {
             html { background-color: #E0E0E0; }
@@ -55,45 +54,45 @@
         .info-table td:first-child {
             width: 36%;
         }
+        
+        /* ====================================================== */
+        /* TATA LETAK TABEL ITEM (GAYA KIRI-KANAN) */
+        /* ====================================================== */
         .item-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
-        }
-        .item-table thead {
-            display: none;
-        }
-        .item-table td {
-            vertical-align: top;
-            padding: 6px 0;
-            border-bottom: 1px dashed #eee;
-        }
-        .item-name {
-            font-weight: bold;
-            word-wrap: break-word;
-            line-height: 1.2em;
-        }
-        .receipt-details-table {
-            width: 100%;
-            margin-top: 3px;
-            border-collapse: collapse;
             font-size: 9pt;
         }
-        .receipt-details-table td {
+        .item-table thead {
+            display: none; /* Sembunyikan header */
+        }
+        .item-table td {
             padding: 1.5px 0;
             vertical-align: top;
-            border: none;
         }
-        .receipt-details-table .label {
+        .item-table .label {
             width: 40%;
             text-align: left;
+            padding-left: 2mm; /* Menjorok sedikit */
         }
-        .receipt-details-table .value {
+        .item-table .value {
             width: 60%;
             text-align: right;
             padding-right: 1mm;
             white-space: nowrap;
         }
+        .item-table .item-name {
+            font-weight: bold;
+            padding-top: 5px; /* Jarak antar item */
+            padding-left: 0;
+        }
+        .item-table tr.item-last-row td {
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #eee;
+        }
+        /* ====================================================== */
+        
         .total-table {
             width: 100%;
             margin-top: 6px;
@@ -140,19 +139,14 @@
             <tr><td>Tanggal</td><td>: {{ $penjualan->created_at->format('d/m/Y H:i') }}</td></tr>
             <tr><td>Pelanggan</td><td>: {{ $penjualan->pelanggan }}</td></tr>
             <tr><td>Dibuat oleh</td><td>: {{ $penjualan->user->name }}</td></tr>
-            {{-- =================================== --}}
-            {{-- LOGIKA STATUS BARU --}}
-            {{-- =================================== --}}
-            <tr>
-                <td>Status</td>
+            <tr><td>Status</td>
                 <td>: 
                     @php
                         $statusText = $penjualan->status;
-                        if ($penjualan->status == 'Pending') {
-                            $statusText = 'Pending Approval';
-                        } elseif ($penjualan->status == 'Approved') {
+                        if ($penjualan->status == 'Pending') { $statusText = 'Pending Approval'; }
+                        elseif ($penjualan->status == 'Approved') {
                             $statusText = 'Belum Dibayar';
-                            if ($penjualan->tgl_jatuh_tempo && \Carbon\Carbon::parse($penjualan->tgl_jatuh_tempo)->isPast()) {
+                            if ($penjualan->tgl_jatuh_tempo && $penjualan->tgl_jatuh_tempo->isPast()) {
                                 $statusText = 'Telat Dibayar';
                             }
                         }
@@ -160,45 +154,60 @@
                     {{ $statusText }}
                 </td>
             </tr>
+            <tr><td>Tag</td><td>: {{ $penjualan->tag ?? '-' }}</td></tr>
+            <tr><td>Ref</td><td>: {{ $penjualan->no_referensi ?? '-' }}</td></tr>
+            <tr><td>Gudang</td><td>: {{ $penjualan->gudang ?? '-' }}</td></tr>
         </table>
 
         <hr class="divider">
 
+        {{-- ====================================================== --}}
+        {{-- STRUKTUR TABEL ITEM YANG BARU (GAYA KIRI-KANAN) --}}
+        {{-- ====================================================== --}}
         <table class="item-table">
-            <tbody>
-                @foreach($penjualan->items as $item)
+            <thead>
                 <tr>
-                    <td>
-                        <div class="item-name">{{ $item->produk }}</div>
-                        <table class="receipt-details-table">
-                            <tr>
-                                <td class="label">Qty</td>
-                                <td class="value">{{ $item->kuantitas }}</td>
-                            </tr>
-                            <tr>
-                                <td class="label">Unit</td>
-                                <td class="value">{{ $item->unit ?? 'pcs' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="label">Harga</td>
-                                <td class="value">Rp{{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
-                            </tr>
-                            @if($item->diskon > 0)
-                            <tr>
-                                <td class="label">Diskon</td>
-                                <td class="value">{{ $item->diskon }}%</td>
-                            </tr>
-                            @endif
-                            <tr>
-                                <td class="label">Jumlah</td>
-                                <td class="value">Rp{{ number_format($item->jumlah_baris, 0, ',', '.') }}</td>
-                            </tr>
-                        </table>
-                    </td>
+                    <th>Keterangan</th>
+                    <th>Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($penjualan->items as $index => $item)
+                {{-- Baris Nama Produk --}}
+                <tr class="item-name">
+                    <td colspan="2">{{ $item->produk->nama_produk }} ({{ $item->produk->item_code }})</td>
+                </tr>
+                {{-- Baris Qty --}}
+                <tr>
+                    <td class="label">Qty</td>
+                    <td class="value">{{ $item->kuantitas }}</td>
+                </tr>
+                {{-- Baris Unit --}}
+                <tr>
+                    <td class="label">Unit</td>
+                    <td class="value">{{ $item->unit ?? 'pcs' }}</td>
+                </tr>
+                {{-- Baris Harga --}}
+                <tr>
+                    <td class="label">Harga</td>
+                    <td class="value">Rp{{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
+                </tr>
+                {{-- Baris Diskon (jika ada) --}}
+                @if($item->diskon > 0)
+                <tr>
+                    <td class="label">Diskon</td>
+                    <td class="value">{{ $item->diskon }}%</td>
+                </tr>
+                @endif
+                {{-- Baris Jumlah --}}
+                <tr class="item-last-row">
+                    <td class="label">Jumlah</td>
+                    <td class="value">Rp{{ number_format($item->jumlah_baris, 0, ',', '.') }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
+        {{-- ====================================================== --}}
 
         <hr class="divider">
 
