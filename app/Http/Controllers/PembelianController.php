@@ -61,24 +61,47 @@ class PembelianController extends Controller
      */
     public function store(Request $request)
     {
+        // =================================================================
+        // VALIDASI LENGKAP (INILAH PERBAIKANNYA)
+        // =================================================================
         $request->validate([
+            // Validasi field utama
             'staf_penyetuju' => 'required|string|max:255',
+            'email_penyetuju' => 'nullable|email|max:255',
             'tgl_transaksi' => 'required|date',
+            'tgl_jatuh_tempo' => 'nullable|date|after_or_equal:tgl_transaksi',
             'urgensi' => 'required|string',
+            'tahun_anggaran' => 'nullable|string|max:255',
+            'tag' => 'nullable|string|max:255',
+            'memo' => 'nullable|string',
             'gudang_id' => 'required|exists:gudangs,id',
             'tax_percentage' => 'required|numeric|min:0',
             'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048',
+            
+            // Validasi Array
             'produk_id' => 'required|array|min:1',
+            'deskripsi' => 'nullable|array',
+            'kuantitas' => 'required|array|min:1',
+            'unit' => 'nullable|array',
+            'harga_satuan' => 'required|array|min:1',
+            'diskon' => 'nullable|array',
+            
+            // Validasi setiap item di dalam array
             'produk_id.*' => 'required|exists:produks,id',
+            'deskripsi.*' => 'nullable|string',
             'kuantitas.*' => 'required|numeric|min:1',
+            'unit.*' => 'nullable|string',
             'harga_satuan.*' => 'required|numeric|min:0',
+            'diskon.*' => 'nullable|numeric|min:0|max:100',
         ]);
 
+        // 1. Proses upload file
         $path = null;
         if ($request->hasFile('lampiran')) {
             $path = $request->file('lampiran')->store('lampiran_pembelian', 'public');
         }
 
+        // 2. Hitung Subtotal dan Grand Total
         $subTotal = 0;
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
@@ -93,6 +116,7 @@ class PembelianController extends Controller
 
         DB::beginTransaction();
         try {
+            // 3. Buat Data Induk (Pembelian)
             $pembelianInduk = Pembelian::create([
                 'user_id' => Auth::id(),
                 'status' => 'Pending',
@@ -110,6 +134,7 @@ class PembelianController extends Controller
                 'grand_total' => $grandTotal,
             ]);
 
+            // 4. Looping untuk menyimpan Data Rincian (PembelianItem)
             foreach ($request->produk_id as $index => $produkId) {
                 $quantity = $request->kuantitas[$index] ?? 0;
                 $price = $request->harga_satuan[$index] ?? 0;
@@ -153,7 +178,6 @@ class PembelianController extends Controller
      */
     public function edit(Pembelian $pembelian)
     {
-        // Hanya Admin yang bisa edit
         if (Auth::user()->role != 'admin') {
              return redirect()->route('pembelian.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
@@ -171,22 +195,39 @@ class PembelianController extends Controller
      */
     public function update(Request $request, Pembelian $pembelian)
     {
-        // Hanya Admin yang bisa update
         if (auth()->user()->role != 'admin') {
              return redirect()->route('pembelian.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
         
+        // =================================================================
+        // VALIDASI LENGKAP (INILAH PERBAIKANNYA)
+        // =================================================================
         $request->validate([
             'staf_penyetuju' => 'required|string|max:255',
+            'email_penyetuju' => 'nullable|email|max:255',
             'tgl_transaksi' => 'required|date',
+            'tgl_jatuh_tempo' => 'nullable|date|after_or_equal:tgl_transaksi',
             'urgensi' => 'required|string',
+            'tahun_anggaran' => 'nullable|string|max:255',
+            'tag' => 'nullable|string|max:255',
+            'memo' => 'nullable|string',
             'gudang_id' => 'required|exists:gudangs,id',
             'tax_percentage' => 'required|numeric|min:0',
             'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048',
+            
             'produk_id' => 'required|array|min:1',
+            'deskripsi' => 'nullable|array',
+            'kuantitas' => 'required|array|min:1',
+            'unit' => 'nullable|array',
+            'harga_satuan' => 'required|array|min:1',
+            'diskon' => 'nullable|array',
+            
             'produk_id.*' => 'required|exists:produks,id',
+            'deskripsi.*' => 'nullable|string',
             'kuantitas.*' => 'required|numeric|min:1',
+            'unit.*' => 'nullable|string',
             'harga_satuan.*' => 'required|numeric|min:0',
+            'diskon.*' => 'nullable|numeric|min:0|max:100',
         ]);
         
         $path = $pembelian->lampiran_path;

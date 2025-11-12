@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class BiayaController extends Controller
 {
-    /**
-     * Tampilkan daftar biaya (berdasarkan role).
-     */
+
     public function index()
     {
         $query = null;
@@ -121,9 +119,6 @@ class BiayaController extends Controller
         return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil diajukan.');
     }
 
-    /**
-     * Menampilkan halaman detail untuk satu data biaya.
-     */
     public function show(Biaya $biaya)
     {
         if (auth()->user()->role != 'admin' && $biaya->user_id != auth()->id()) {
@@ -133,34 +128,25 @@ class BiayaController extends Controller
         return view('biaya.show', compact('biaya'));
     }
 
-    /**
-     * Menampilkan form untuk mengedit data biaya.
-     */
     public function edit(Biaya $biaya)
     {
-        // === PERUBAHAN KEAMANAN ===
-        // Hanya Admin yang bisa edit
+
         if (Auth::user()->role != 'admin') {
              return redirect()->route('biaya.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
-        // ==========================
+
 
         $biaya->load('items');
         $kontaks = Kontak::all();
         return view('biaya.edit', compact('biaya', 'kontaks'));
     }
 
-    /**
-     * Mengupdate data biaya yang ada di database.
-     */
     public function update(Request $request, Biaya $biaya)
     {
-        // === PERUBAHAN KEAMANAN ===
-        // Hanya Admin yang bisa update
+
         if (Auth::user()->role != 'admin') {
              return redirect()->route('biaya.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
-        // ==========================
 
         $request->validate([
             'bayar_dari' => 'required|string',
@@ -176,7 +162,6 @@ class BiayaController extends Controller
 
         $path = $biaya->lampiran_path;
         if ($request->hasFile('lampiran')) {
-            // TODO: Hapus file lama
             $path = $request->file('lampiran')->store('lampiran_biaya', 'public');
         }
 
@@ -223,9 +208,6 @@ class BiayaController extends Controller
         return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil diperbarui.');
     }
 
-    /**
-     * Menghapus data biaya dari database.
-     */
     public function destroy(Biaya $biaya)
     {
         // Logika ini sudah benar: Admin bisa hapus, User bisa hapus jika Pending
@@ -240,9 +222,6 @@ class BiayaController extends Controller
         return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil dihapus.');
     }
 
-    /**
-     * Menyetujui data biaya.
-     */
     public function approve(Biaya $biaya)
     {
         if (auth()->user()->role != 'admin') {
@@ -254,9 +233,6 @@ class BiayaController extends Controller
         return redirect()->route('biaya.index')->with('success', 'Data biaya berhasil disetujui.');
     }
 
-    /**
-     * Menampilkan halaman print struk.
-     */
     public function print(Biaya $biaya)
     {
         if (auth()->user()->role != 'admin' && $biaya->user_id != auth()->id()) {

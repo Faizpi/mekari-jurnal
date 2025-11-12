@@ -6,6 +6,17 @@
         <h1 class="h3 mb-0 text-gray-800">Buat Penagihan Penjualan</h1>
         <h3 class="font-weight-bold text-right" id="grand-total-display">Total Rp0,00</h3>
     </div>
+    
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <strong>Terjadi Kesalahan Validasi:</strong>
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <form action="{{ route('penjualan.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
@@ -18,7 +29,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="pelanggan">Pelanggan *</label>
-                                    <select class="form-control @error('pelanggan') is-invalid @enderror" id="kontak-select" name="pelanggan" required>
+                                    <select class="form-control @error('pelanggan') is-invalid @enderror" id="pelanggan" name="pelanggan" required>
                                         <option value="">Pilih kontak...</option>
                                         @foreach($kontaks as $kontak)
                                             <option value="{{ $kontak->nama }}"
@@ -36,14 +47,14 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="email">Email</label>
-                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email-input" name="email" value="{{ old('email') }}">
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}">
                                     @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="alamat_penagihan">Alamat Penagihan</label>
-                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" id="alamat-input" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
+                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" id="alamat_penagihan" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
                             @error('alamat_penagihan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="row">
@@ -62,9 +73,6 @@
                                 </div>
                             </div>
                              <div class="col-md-4">
-                                {{-- =================================== --}}
-                                {{-- PERUBAHAN: SYARAT PEMBAYARAN --}}
-                                {{-- =================================== --}}
                                 <div class="form-group">
                                     <label for="syarat_pembayaran">Syarat Pembayaran</label>
                                     <select class="form-control @error('syarat_pembayaran') is-invalid @enderror" id="syarat_pembayaran" name="syarat_pembayaran">
@@ -149,9 +157,6 @@
                                         </td>
                                         <td><input type="text" class="form-control product-description" name="deskripsi[]" value="{{ old('deskripsi.'.$index) }}"></td>
                                         <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="{{ old('kuantitas.'.$index) }}" min="1" required></td>
-                                        {{-- =================================== --}}
-                                        {{-- PERUBAHAN: UNIT --}}
-                                        {{-- =================================== --}}
                                         <td>
                                             <select class="form-control" name="unit[]">
                                                 <option value="Pcs" {{ old('unit.'.$index) == 'Pcs' ? 'selected' : '' }}>Pcs</option>
@@ -165,7 +170,6 @@
                                     </tr>
                                 @endforeach
                             @else
-                                {{-- Baris default --}}
                                 <tr>
                                     <td>
                                         <select class="form-control product-select @error('produk_id.0') is-invalid @enderror" name="produk_id[]" required>
@@ -179,9 +183,6 @@
                                     </td>
                                     <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
                                     <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
-                                    {{-- =================================== --}}
-                                    {{-- PERUBAHAN: UNIT --}}
-                                    {{-- =================================== --}}
                                     <td>
                                         <select class="form-control" name="unit[]">
                                             <option value="Pcs">Pcs</option>
@@ -198,7 +199,6 @@
                     </table>
                 </div>
                 <button type="button" class="btn btn-link pl-0" id="add-product-row">+ Tambah Data</button>
-
                 @error('produk_id.*') <div class="text-danger small mt-2">Error di baris Produk: {{ $message }}</div> @enderror
                 @error('kuantitas.*') <div class="text-danger small mt-2">Error di baris Kuantitas: {{ $message }}</div> @enderror
                 @error('harga_satuan.*') <div class="text-danger small mt-2">Error di baris Harga: {{ $message }}</div> @enderror
@@ -212,7 +212,7 @@
                             @error('memo') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                          <div class="form-group">
-                            <label>Lampiran</label>
+                            <label for="lampiran">Lampiran</label>
                             <div class="custom-file">
                                 <input type="file" class="custom-file-input @error('lampiran') is-invalid @enderror" id="lampiran" name="lampiran">
                                 <label class="custom-file-label" for="lampiran">Pilih file...</label>
@@ -228,7 +228,7 @@
                                     <td id="subtotal-display">Rp0,00</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Pajak (%)</strong></td>
+                                    <td><label for="tax_percentage_input" class="mb-0"><strong>Pajak (%)</strong></label></td>
                                     <td style="width: 50%;">
                                         <input type="number" class="form-control text-right @error('tax_percentage') is-invalid @enderror" 
                                                id="tax_percentage_input" name="tax_percentage" value="{{ old('tax_percentage', 0) }}" min="0" step="0.01">
@@ -269,14 +269,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('product-table-body');
     const addRowBtn = document.getElementById('add-product-row');
     const taxInput = document.getElementById('tax_percentage_input');
-    const kontakSelect = document.getElementById('kontak-select');
-    const emailInput = document.getElementById('email-input');
-    const alamatInput = document.getElementById('alamat-input');
+    
+    // Perbarui ID JavaScript
+    const kontakSelect = document.getElementById('pelanggan');
+    const emailInput = document.getElementById('email');
+    const alamatInput = document.getElementById('alamat_penagihan');
 
+    // --- FUNGSI AUTOFILL KONTAK ---
     kontakSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
+        
         emailInput.value = selectedOption.dataset.email || '';
         alamatInput.value = selectedOption.dataset.alamat || '';
+
         tableBody.querySelectorAll('tr').forEach(row => {
             const diskonInput = row.querySelector('.product-discount');
             if (diskonInput) {
@@ -286,6 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Simpan HTML dropdown produk untuk baris baru
     const productDropdownHtml = `
         <select class="form-control product-select" name="produk_id[]" required>
             <option value="">Pilih produk...</option>
@@ -354,9 +360,6 @@ document.addEventListener('DOMContentLoaded', function () {
             <td>${productDropdownHtml}</td>
             <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
             <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
-            {{-- =================================== --}}
-            {{-- PERUBAHAN: UNIT (di JS) --}}
-            {{-- =================================== --}}
             <td>
                 <select class="form-control" name="unit[]">
                     <option value="Pcs">Pcs</option>

@@ -21,19 +21,24 @@ public function up()
             // Info Utama
             $table->string('staf_penyetuju');
             $table->string('email_penyetuju')->nullable();
-            $table->date('tgl_transaksi');
+            $table->dateTime('tgl_transaksi'); // Pastikan ini dateTime
             $table->date('tgl_jatuh_tempo')->nullable();
             $table->string('urgensi');
-            $table->string('tahun_anggaran')->nullable();
-            $table->unsignedBigInteger('gudang_id');
+            
+            // KOLOM YANG HILANG (PASTIKAN INI SEMUA ADA)
+            $table->unsignedBigInteger('gudang_id'); // <-- INI YANG ERROR
             $table->foreign('gudang_id')->references('id')->on('gudangs');
+            $table->string('tahun_anggaran')->nullable();
+            $table->string('tag')->nullable(); 
+            // ------------------------------------------
+
             $table->text('memo')->nullable();
             $table->string('lampiran_path')->nullable();
             
             // Info Status & Total
             $table->string('status')->default('Pending');
+            $table->decimal('tax_percentage', 5, 2)->default(0);
             $table->decimal('grand_total', 15, 2);
-            $table->decimal('tax_percentage', 5, 2)->default(0); // <-- TAMBAHKAN INI
 
             $table->timestamps();
         });

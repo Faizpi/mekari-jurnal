@@ -10,16 +10,11 @@ class TransactionsExport implements FromView, WithTitle
 {
     protected $transactions;
 
-    // Terima data yang sudah difilter dari controller
     public function __construct($transactions)
     {
         $this->transactions = $transactions;
     }
 
-    /**
-     * Menggunakan file Blade untuk merender Excel.
-     * Ini memberi kita fleksibilitas penuh atas tampilan.
-     */
     public function view(): View
     {
         return view('reports.transactions', [
@@ -27,9 +22,6 @@ class TransactionsExport implements FromView, WithTitle
         ]);
     }
 
-    /**
-     * Memberi nama pada sheet di Excel.
-     */
     public function title(): string
     {
         return 'Laporan Transaksi';
