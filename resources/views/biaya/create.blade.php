@@ -36,16 +36,28 @@
                 {{-- DETAIL BIAYA --}}
                 <div class="row">
                     <div class="col-md-6">
+                        {{-- =================================== --}}
+                        {{-- PERUBAHAN MENJADI DROPDOWN KONTAK --}}
+                        {{-- =================================== --}}
                         <div class="form-group">
                             <label for="penerima">Penerima</label>
-                            <input type="text" class="form-control @error('penerima') is-invalid @enderror" id="penerima" name="penerima" value="{{ old('penerima') }}">
+                            <select class="form-control @error('penerima') is-invalid @enderror" id="kontak-select" name="penerima">
+                                <option value="">Pilih kontak...</option>
+                                @foreach($kontaks as $kontak)
+                                    <option value="{{ $kontak->nama }}"
+                                            data-alamat="{{ $kontak->alamat }}"
+                                            {{ old('penerima') == $kontak->nama ? 'selected' : '' }}>
+                                        {{ $kontak->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
                             @error('penerima')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                          <div class="form-group">
                             <label for="alamat_penagihan">Alamat Penagihan</label>
-                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
+                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" id="alamat-input" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
                             @error('alamat_penagihan')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -107,6 +119,7 @@
                             </tr>
                         </thead>
                         <tbody id="expense-table-body">
+                            {{-- (Logika old() tidak berubah) --}}
                             @if(old('kategori'))
                                 @foreach(old('kategori') as $index => $oldKategori)
                                     <tr>
@@ -157,9 +170,6 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                         {{-- =================================== --}}
-                         {{-- TABEL TOTAL (DENGAN INPUT PAJAK MANUAL %) --}}
-                         {{-- =================================== --}}
                          <table class="table table-borderless text-right">
                             <tbody>
                                 <tr>
@@ -169,7 +179,6 @@
                                 <tr>
                                     <td><strong>Pajak (%)</strong></td>
                                     <td style="width: 50%;">
-                                        {{-- UBAH DARI SELECT MENJADI INPUT NUMBER --}}
                                         <input type="number" class="form-control text-right @error('tax_percentage') is-invalid @enderror" 
                                                id="tax_percentage_input" name="tax_percentage" value="{{ old('tax_percentage', 0) }}" min="0" step="0.01">
                                         @error('tax_percentage') 
@@ -204,8 +213,15 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('expense-table-body');
     const addRowBtn = document.getElementById('add-row-btn');
-    // UBAH NAMA VARIABEL DARI taxSelect MENJADI taxInput
     const taxInput = document.getElementById('tax_percentage_input');
+    const kontakSelect = document.getElementById('kontak-select'); // <-- Tambahkan ini
+    const alamatInput = document.getElementById('alamat-input'); // <-- Tambahkan ini
+
+    // --- FUNGSI AUTOFILL KONTAK ---
+    kontakSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        alamatInput.value = selectedOption.dataset.alamat || '';
+    });
 
     const formatRupiah = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 
@@ -215,7 +231,6 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotal += parseFloat(input.value) || 0;
         });
         
-        // UBAH LOGIKA UNTUK MEMBACA DARI INPUT
         let taxPercentage = parseFloat(taxInput.value) || 0;
         let taxAmount = subtotal * (taxPercentage / 100);
         
@@ -227,17 +242,14 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('grand-total-display').innerText = `Total ${formatRupiah(total)}`;
     };
 
-    // Hitung ulang jika input jumlah di tabel berubah
     tableBody.addEventListener('input', function(event) {
         if (event.target.classList.contains('expense-amount')) {
             calculateTotalExpense();
         }
     });
 
-    // UBAH EVENT DARI 'change' MENJADI 'input' AGAR LANGSUNG BERUBAH
     taxInput.addEventListener('input', calculateTotalExpense);
 
-    // Tambah baris baru
     addRowBtn.addEventListener('click', function() {
         const newRow = tableBody.insertRow();
         newRow.innerHTML = `
@@ -248,7 +260,6 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
     });
 
-    // Hapus baris
     tableBody.addEventListener('click', function (event) {
         if (event.target.classList.contains('remove-row-btn')) {
             event.target.closest('tr').remove();
@@ -256,10 +267,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     
-    // Hitung total saat halaman dimuat
     calculateTotalExpense();
 
-    // Script untuk menampilkan nama file di input
     document.querySelectorAll('.custom-file-input').forEach(input => {
         input.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
