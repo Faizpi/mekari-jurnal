@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Gudang;
 use App\Produk;
-use App\GudangProduk; // <-- Model tabel pivot stok
+use App\GudangProduk;
 use Illuminate\Http\Request;
 
 class StokController extends Controller
@@ -20,14 +20,17 @@ class StokController extends Controller
      */
     public function index()
     {
-        // Ambil semua data master untuk form
+        // Data untuk Form Tambah Stok
         $gudangs = Gudang::all();
         $produks = Produk::all();
 
-        // Ambil semua data stok yang sudah ada, muat relasinya
-        $stokItems = GudangProduk::with('gudang', 'produk')->get();
+        // Data untuk Daftar Stok (Accordion)
+        // Kita ambil semua gudang, dan 'eager load' (ambil sekalian)
+        // relasi 'produkStok' (data pivot) DAN
+        // relasi 'produk' yang ada di dalam 'produkStok'.
+        $gudangsWithStok = Gudang::with('produkStok.produk')->get();
 
-        return view('stok.index', compact('gudangs', 'produks', 'stokItems'));
+        return view('stok.index', compact('gudangs', 'produks', 'gudangsWithStok'));
     }
 
     /**
@@ -42,7 +45,6 @@ class StokController extends Controller
         ]);
 
         // Cari data stok. Jika sudah ada, update. Jika belum, buat baru.
-        // Ini mencegah duplikasi data stok (1 produk di 1 gudang).
         $stok = GudangProduk::updateOrCreate(
             [
                 'gudang_id' => $request->gudang_id,

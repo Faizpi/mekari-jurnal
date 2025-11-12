@@ -55,32 +55,58 @@
         <div class="col-lg-8">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Daftar Stok Saat Ini</h6>
+                    <h6 class="m-0 font-weight-bold text-primary">Daftar Stok per Gudang</h6>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
-                                <tr>
-                                    <th>Gudang</th>
-                                    <th>Produk</th>
-                                    <th class="text-right">Stok</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($stokItems as $item)
-                                <tr>
-                                    <td>{{ $item->gudang->nama_gudang }}</td>
-                                    <td>{{ $item->produk->nama_produk }}</td>
-                                    <td class="text-right font-weight-bold">{{ $item->stok }}</td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="3" class="text-center">Belum ada data stok.</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                    {{-- Wrapper untuk accordion --}}
+                    <div id="stokAccordion">
+                        @forelse ($gudangsWithStok as $gudang)
+                            <div class="card mb-1">
+                                {{-- Header Gudang (Tombol Toggle) --}}
+                                <div class="card-header py-3" id="heading-{{ $gudang->id }}">
+                                    <h6 class="m-0 font-weight-bold d-flex justify-content-between align-items-center">
+                                        <a href="#" class="text-primary" data-toggle="collapse" data-target="#collapse-{{ $gudang->id }}" aria-expanded="false" aria-controls="collapse-{{ $gudang->id }}">
+                                            {{ $gudang->nama_gudang }}
+                                        </a>
+                                        {{-- Hitung total stok di gudang ini --}}
+                                        <span class="badge badge-light badge-pill">{{ $gudang->produkStok->sum('stok') }} Total Item</span>
+                                    </h6>
+                                </div>
+                                
+                                {{-- Konten Rincian Produk (Collapsible) --}}
+                                <div id="collapse-{{ $gudang->id }}" class="collapse" aria-labelledby="heading-{{ $gudang->id }}" data-parent="#stokAccordion">
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped mb-0">
+                                                <thead>
+                                                    <tr class="bg-light">
+                                                        <th class="pl-4">Produk</th>
+                                                        <th>Item Code</th>
+                                                        <th class="text-right pr-4">Stok</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                @forelse($gudang->produkStok as $stokItem)
+                                                    {{-- Tampilkan hanya jika produk ada (menghindari error) --}}
+                                                    @if($stokItem->produk) 
+                                                        <tr>
+                                                            <td class="pl-4">{{ $stokItem->produk->nama_produk }}</td>
+                                                            <td>{{ $stokItem->produk->item_code }}</td>
+                                                            <td class="text-right font-weight-bold pr-4">{{ $stokItem->stok }}</td>
+                                                        </tr>
+                                                    @endif
+                                                @empty
+                                                    <tr><td colspan="3" class="text-center p-3">Belum ada stok produk di gudang ini.</td></tr>
+                                                @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="alert alert-info">Belum ada gudang yang dibuat. Silakan tambahkan gudang di menu "Master Gudang".</div>
+                        @endforelse
                     </div>
                 </div>
             </div>
