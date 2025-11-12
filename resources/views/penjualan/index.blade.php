@@ -71,15 +71,16 @@
                         <th>Nomor</th>
                         <th>Pembuat</th>
                         <th>Pelanggan</th>
+                        <th>Gudang</th>
                         <th class="text-right">Grand Total</th>
-                        <th class="text-center">Status Pembayaran</th>
+                        <th class="text-center">Status</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($penjualans as $item)
                     <tr>
-                        <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d/m/Y') }}</td>
+                        <td>{{ $item->tgl_transaksi->format('d/m/Y') }}</td>
                         <td>
                             <a href="{{ route('penjualan.show', $item->id) }}">
                                 <strong>INV-{{ $item->id }}</strong>
@@ -87,90 +88,60 @@
                         </td>
                         <td>{{ $item->user->name }}</td>
                         <td>{{ $item->pelanggan }}</td>
+                        <td>{{ $item->gudang->nama_gudang ?? 'N/A' }}</td>
                         <td class="text-right font-weight-bold">Rp {{ number_format($item->grand_total, 0, ',', '.') }}</td>
-                        
-                        {{-- =================================== --}}
-                        {{-- LOGIKA STATUS BARU --}}
-                        {{-- =================================== --}}
                         <td class="text-center">
                             @php
-                                $statusBadge = 'badge-secondary';
-                                $statusText = $item->status;
-
+                                $statusBadge = 'badge-secondary'; $statusText = $item->status;
                                 if ($item->status == 'Pending') {
-                                    $statusBadge = 'badge-warning';
-                                    $statusText = 'Pending Approval';
+                                    $statusBadge = 'badge-warning'; $statusText = 'Pending Approval';
                                 } elseif ($item->status == 'Approved') {
-                                    $statusBadge = 'badge-info';
-                                    $statusText = 'Belum Dibayar';
-                                    
-                                    // Cek apakah telat
-                                    if ($item->tgl_jatuh_tempo && \Carbon\Carbon::parse($item->tgl_jatuh_tempo)->isPast()) {
-                                        $statusBadge = 'badge-danger';
-                                        $statusText = 'Telat Dibayar';
+                                    $statusBadge = 'badge-info'; $statusText = 'Belum Dibayar';
+                                    if ($item->tgl_jatuh_tempo && $item->tgl_jatuh_tempo->isPast()) {
+                                        $statusBadge = 'badge-danger'; $statusText = 'Telat Dibayar';
                                     }
                                 } elseif ($item->status == 'Lunas') {
-                                    $statusBadge = 'badge-success';
-                                    $statusText = 'Lunas';
+                                    $statusBadge = 'badge-success'; $statusText = 'Lunas';
                                 }
                             @endphp
                             <span class="badge {{ $statusBadge }}">{{ $statusText }}</span>
                         </td>
-                        
-                        {{-- =================================== --}}
-                        {{-- LOGIKA TOMBOL AKSI BARU --}}
-                        {{-- =================================== --}}
                         <td class="text-center">
                             @if(auth()->user()->role == 'admin')
-                                {{-- === TOMBOL ADMIN === --}}
-
-                                {{-- 1. Tombol Approve (Hanya jika Pending) --}}
+                                <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
+                                    <i class="fas fa-pen"></i>
+                                </a>
                                 @if($item->status == 'Pending')
-                                    <form action="{{ route('penjualan.approve', $item->id) }}" method="POST" class="d-inline" title="Setujui data ini">
+                                    <form action="{{ route('penjualan.approve', $item->id) }}" method="POST" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="btn btn-success btn-circle btn-sm"><i class="fas fa-check"></i></button>
+                                        <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
+                                            <i class="fas fa-check"></i>
+                                        </button>
                                     </form>
                                 @endif
-
-                                {{-- 2. Tombol "Tandai Lunas" (Hanya jika Approved/Telat) --}}
                                 @if($item->status == 'Approved')
                                     <form action="{{ route('penjualan.markAsPaid', $item->id) }}" method="POST" class="d-inline" title="Tandai Lunas">
                                         @csrf
                                         <button type="submit" class="btn btn-primary btn-circle btn-sm"><i class="fas fa-dollar-sign"></i></button>
                                     </form>
                                 @endif
-                                
-                                {{-- 3. Tombol Edit (Selalu ada) --}}
-                                <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                
-                                {{-- 4. Tombol Hapus (Selalu ada) --}}
-                                <button type="button" class="btn btn-danger btn-circle btn-sm" title="Hapus"
+                            @endif
+
+                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
+                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
                                         data-toggle="modal" data-target="#deleteModal" data-action="{{ route('penjualan.destroy', $item->id) }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                            @else
-                                {{-- === TOMBOL USER BIASA === --}}
-                                @if($item->status == 'Pending')
-                                    {{-- User bisa Edit/Hapus HANYA JIKA Pending --}}
-                                    <a href="{{ route('penjualan.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
-                                        <i class="fas fa-pen"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-danger btn-circle btn-sm" title="Hapus"
-                                            data-toggle="modal" data-target="#deleteModal" data-action="{{ route('penjualan.destroy', $item->id) }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                @else
-                                    {{-- Terkunci jika sudah Approved/Lunas --}}
-                                    <span class="text-muted small">Terkunci</span>
-                                @endif
+                            @endif
+                            
+                            @if(auth()->user()->role != 'admin' && $item->status != 'Pending')
+                                <span class="text-muted small">Terkunci</span>
                             @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center">Belum ada data penjualan.</td>
+                        <td colspan="8" class="text-center">Belum ada data penjualan.</td>
                     </tr>
                     @endforelse
                 </tbody>

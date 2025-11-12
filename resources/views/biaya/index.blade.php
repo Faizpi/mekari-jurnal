@@ -12,17 +12,13 @@
 @if (session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     </div>
 @endif
 @if (session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     </div>
 @endif
 
@@ -36,14 +32,11 @@
                             Biaya (Bulan Ini)</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalBulanIni, 0, ',', '.') }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
-                    </div>
+                    <div class="col-auto"><i class="fas fa-calendar-alt fa-2x text-gray-300"></i></div>
                 </div>
             </div>
         </div>
     </div>
-
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
@@ -53,14 +46,11 @@
                             Biaya (30 Hari Terakhir)</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($total30Hari, 0, ',', '.') }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
-                    </div>
+                    <div class="col-auto"><i class="fas fa-money-bill-wave fa-2x text-gray-300"></i></div>
                 </div>
             </div>
         </div>
     </div>
-
     <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-warning shadow h-100 py-2">
             <div class="card-body">
@@ -70,9 +60,7 @@
                             Biaya Belum Dibayar</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalBelumDibayar, 0, ',', '.') }}</div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-comments-dollar fa-2x text-gray-300"></i>
-                    </div>
+                    <div class="col-auto"><i class="fas fa-comments-dollar fa-2x text-gray-300"></i></div>
                 </div>
             </div>
         </div>
@@ -91,8 +79,8 @@
                         <th>Tanggal</th>
                         <th>Nomor</th>
                         <th>Pembuat</th>
-                        <th>Penerima</th> {{-- Kategori diubah jadi Penerima --}}
-                        <th class="text-right">Grand Total</th> {{-- Total diubah jadi Grand Total --}}
+                        <th>Penerima</th>
+                        <th class="text-right">Grand Total</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Aksi</th>
                     </tr>
@@ -118,17 +106,17 @@
                                 <span class="badge badge-danger">{{ $item->status }}</span>
                             @endif
                         </td>
+                        
+                        {{-- =================================== --}}
+                        {{-- PERUBAHAN LOGIKA TOMBOL AKSI --}}
+                        {{-- =================================== --}}
                         <td class="text-center">
-                            {{-- (Logika tombol aksi tidak berubah) --}}
-                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
-                                <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
+                            @if(auth()->user()->role == 'admin')
+                                {{-- Admin bisa Edit & Approve --}}
+                                <a href="{{ route('biaya.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
                                     <i class="fas fa-pen"></i>
                                 </a>
-                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
-                                        data-toggle="modal" data-target="#deleteModal" data-action="{{ route('biaya.destroy', $item->id) }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                @if(auth()->user()->role == 'admin' && $item->status == 'Pending')
+                                @if($item->status == 'Pending')
                                     <form action="{{ route('biaya.approve', $item->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
@@ -136,7 +124,18 @@
                                         </button>
                                     </form>
                                 @endif
-                            @else
+                            @endif
+
+                            {{-- Admin DAN User bisa Hapus jika masih Pending --}}
+                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
+                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                        data-toggle="modal" data-target="#deleteModal" data-action="{{ route('biaya.destroy', $item->id) }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            @endif
+
+                            {{-- Tampilkan Terkunci jika BUKAN admin DAN status BUKAN pending --}}
+                            @if(auth()->user()->role != 'admin' && $item->status != 'Pending')
                                 <span class="text-muted small">Terkunci</span>
                             @endif
                         </td>
@@ -165,8 +164,6 @@
             <div class="modal-body">Pilih "Hapus" di bawah ini jika Anda yakin untuk menghapus data ini.</div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
-                
-                {{-- Form ini akan diisi action-nya oleh JavaScript --}}
                 <form id="deleteForm" method="POST">
                     @csrf
                     @method('DELETE')

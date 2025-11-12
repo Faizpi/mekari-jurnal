@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Biaya;
 use App\BiayaItem;
 use App\User;
-use App\Kontak; // <-- TAMBAHKAN INI
+use App\Kontak;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -52,8 +52,8 @@ class BiayaController extends Controller
      */
     public function create()
     {
-        $kontaks = Kontak::all(); // <-- TAMBAHKAN INI
-        return view('biaya.create', compact('kontaks')); // <-- Kirim 'kontaks'
+        $kontaks = Kontak::all();
+        return view('biaya.create', compact('kontaks'));
     }
 
     /**
@@ -70,7 +70,7 @@ class BiayaController extends Controller
             'total' => 'required|array|min:1',
             'kategori.*' => 'required|string|max:255',
             'total.*' => 'required|numeric|min:0',
-            'penerima' => 'nullable|string|max:255', // Validasi 'penerima'
+            'penerima' => 'nullable|string|max:255',
         ]);
 
         $path = null;
@@ -138,16 +138,16 @@ class BiayaController extends Controller
      */
     public function edit(Biaya $biaya)
     {
-        if (Auth::user()->role != 'admin' && $biaya->user_id != Auth::id()) {
-             return redirect()->route('biaya.index')->with('error', 'Anda tidak punya hak akses.');
+        // === PERUBAHAN KEAMANAN ===
+        // Hanya Admin yang bisa edit
+        if (Auth::user()->role != 'admin') {
+             return redirect()->route('biaya.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
-        if ($biaya->status != 'Pending' && Auth::user()->role != 'admin') {
-            return redirect()->route('biaya.index')->with('error', 'Data yang sudah diproses tidak bisa diedit.');
-        }
+        // ==========================
 
         $biaya->load('items');
-        $kontaks = Kontak::all(); // <-- TAMBAHKAN INI
-        return view('biaya.edit', compact('biaya', 'kontaks')); // <-- Kirim 'kontaks'
+        $kontaks = Kontak::all();
+        return view('biaya.edit', compact('biaya', 'kontaks'));
     }
 
     /**
@@ -155,9 +155,12 @@ class BiayaController extends Controller
      */
     public function update(Request $request, Biaya $biaya)
     {
-        if (Auth::user()->role != 'admin' && $biaya->user_id != Auth::id()) {
-             return redirect()->route('biaya.index')->with('error', 'Anda tidak punya hak akses.');
+        // === PERUBAHAN KEAMANAN ===
+        // Hanya Admin yang bisa update
+        if (Auth::user()->role != 'admin') {
+             return redirect()->route('biaya.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
+        // ==========================
 
         $request->validate([
             'bayar_dari' => 'required|string',
@@ -168,7 +171,7 @@ class BiayaController extends Controller
             'total' => 'required|array|min:1',
             'kategori.*' => 'required|string|max:255',
             'total.*' => 'required|numeric|min:0',
-            'penerima' => 'nullable|string|max:255', // Validasi 'penerima'
+            'penerima' => 'nullable|string|max:255',
         ]);
 
         $path = $biaya->lampiran_path;
@@ -225,8 +228,12 @@ class BiayaController extends Controller
      */
     public function destroy(Biaya $biaya)
     {
-        if (auth()->user()->role != 'admin' && $biaya->user_id != auth()->id()) {
+        // Logika ini sudah benar: Admin bisa hapus, User bisa hapus jika Pending
+        if (Auth::user()->role != 'admin' && $biaya->user_id != Auth::id()) {
              return redirect()->route('biaya.index')->with('error', 'Anda tidak punya hak akses.');
+        }
+        if ($biaya->status != 'Pending' && Auth::user()->role != 'admin') {
+            return redirect()->route('biaya.index')->with('error', 'Data yang sudah diproses tidak bisa dihapus.');
         }
         
         $biaya->delete();

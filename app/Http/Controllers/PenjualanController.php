@@ -6,7 +6,7 @@ use App\Penjualan;
 use App\PenjualanItem;
 use App\Produk;
 use App\Gudang;
-use App\Kontak; // <-- Pastikan ini ada
+use App\Kontak;
 use App\GudangProduk;
 use App\User;
 use Illuminate\Http\Request;
@@ -24,17 +24,29 @@ class PenjualanController extends Controller
     {
         $query = null;
         if (Auth::user()->role == 'admin') {
-            $query = Penjualan::with('user', 'gudang');
+            $query = Penjualan::with('user', 'gudang'); // Muat relasi gudang
         } else {
+            // User biasa hanya melihat data dari gudangnya sendiri
             $userGudangId = Auth::user()->gudang_id;
             $query = Penjualan::where('gudang_id', $userGudangId)->with('user', 'gudang');
         }
-        
-        $allPenjualan = $query->latest()->get();
 
+        // Kalkulasi Kartu Ringkasan
         $totalBelumDibayar = (clone $query)->whereIn('status', ['Pending', 'Approved'])->sum('grand_total');
-        $totalTelatDibayar = (clone $query)->where('status', 'Approved')->whereNotNull('tgl_jatuh_tempo')->where('tgl_jatuh_tempo', '<', Carbon::now())->sum('grand_total');
-        $pelunasan30Hari = (clone $query)->where('status', 'Lunas')->where('updated_at', '>=', Carbon::now()->subDays(30))->sum('grand_total');
+        
+        $totalTelatDibayar = (clone $query)
+            ->where('status', 'Approved') // Hanya yang sudah disetujui
+            ->whereNotNull('tgl_jatuh_tempo')
+            ->where('tgl_jatuh_tempo', '<', Carbon::now())
+            ->sum('grand_total');
+
+        $pelunasan30Hari = (clone $query)
+            ->where('status', 'Lunas')
+            ->where('updated_at', '>=', Carbon::now()->subDays(30))
+            ->sum('grand_total');
+
+        // Ambil data untuk tabel
+        $allPenjualan = $query->latest()->get();
 
         return view('penjualan.index', [
             'penjualans' => $allPenjualan,
@@ -56,17 +68,21 @@ class PenjualanController extends Controller
     }
 
     /**
-     * Menyimpan data baru ke database.
+     * Menyimpan data baru ke database (Struktur Induk & Rincian).
      */
     public function store(Request $request)
     {
         $request->validate([
             'pelanggan' => 'required|string|max:255',
             'tgl_transaksi' => 'required|date',
-            'gudang_id' => 'required|exists:gudangs,id',
+            'gudang_id' => 'required|exists:gudangs,id', // Validasi gudang
             'tax_percentage' => 'required|numeric|min:0',
             'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048',
+            
             'produk_id' => 'required|array|min:1',
+            'kuantitas' => 'required|array|min:1',
+            'harga_satuan' => 'required|array|min:1',
+            
             'produk_id.*' => 'required|exists:produks,id',
             'kuantitas.*' => 'required|numeric|min:1',
             'harga_satuan.*' => 'required|numeric|min:0',
@@ -77,20 +93,17 @@ class PenjualanController extends Controller
             $path = $request->file('lampiran')->store('lampiran_penjualan', 'public');
         }
 
-        $grandTotal = 0;
-        $itemsData = [];
+        $subTotal = 0;
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
             $price = $request->harga_satuan[$index] ?? 0;
             $discount = $request->diskon[$index] ?? 0;
-            $jumlah_baris = ($quantity * $price) * (1 - ($discount / 100));
-            $grandTotal += $jumlah_baris;
-            $itemsData[] = [ /* ... (data item) ... */ ];
+            $subTotal += ($quantity * $price) * (1 - ($discount / 100));
         }
         
         $pajakPersen = $request->tax_percentage ?? 0;
-        $jumlahPajak = $grandTotal * ($pajakPersen / 100);
-        $grandTotal += $jumlahPajak;
+        $jumlahPajak = $subTotal * ($pajakPersen / 100);
+        $grandTotal = $subTotal + $jumlahPajak;
 
         DB::beginTransaction();
         try {
@@ -106,7 +119,6 @@ class PenjualanController extends Controller
                 'syarat_pembayaran' => $request->syarat_pembayaran,
                 'no_referensi' => $request->no_referensi,
                 'tag' => $request->tag,
-                'gudang' => $request->gudang, // Anda masih punya kolom ini di form, tapi tidak di DB
                 'memo' => $request->memo,
                 'lampiran_path' => $path,
                 'tax_percentage' => $pajakPersen,
@@ -152,45 +164,33 @@ class PenjualanController extends Controller
     }
 
     /**
-     * ======================================================
-     * FUNGSI EDIT YANG DIPERBARUI
-     * ======================================================
-     * Menampilkan form edit dengan data induk DAN rincian.
+     * Menampilkan form edit.
      */
     public function edit(Penjualan $penjualan)
     {
-        // Keamanan
-        if (Auth::user()->role != 'admin' && $penjualan->user_id != Auth::id()) {
-             return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+        // Hanya Admin yang bisa edit
+        if (Auth::user()->role != 'admin') {
+             return redirect()->route('penjualan.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
-         if ($penjualan->status != 'Pending' && Auth::user()->role != 'admin') {
-            return redirect()->route('penjualan.index')->with('error', 'Data yang sudah diproses tidak bisa diedit.');
-         }
 
-        // Ambil semua master data untuk dropdown
         $produks = Produk::all();
         $gudangs = Gudang::all();
         $kontaks = Kontak::all();
-        
-        // Muat rincian item
         $penjualan->load('items');
         
         return view('penjualan.edit', compact('penjualan', 'produks', 'gudangs', 'kontaks'));
     }
 
     /**
-     * ======================================================
-     * FUNGSI UPDATE YANG DIPERBARUI
-     * ======================================================
      * Mengupdate data induk DAN rincian.
      */
     public function update(Request $request, Penjualan $penjualan)
     {
-         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
-             return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
+         // Hanya Admin yang bisa update
+         if (auth()->user()->role != 'admin') {
+             return redirect()->route('penjualan.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
         
-        // 1. Validasi (Sama persis seperti store)
         $request->validate([
             'pelanggan' => 'required|string|max:255',
             'tgl_transaksi' => 'required|date',
@@ -203,30 +203,27 @@ class PenjualanController extends Controller
             'harga_satuan.*' => 'required|numeric|min:0',
         ]);
         
-        // 2. Proses upload file (jika ada file baru)
-        $path = $penjualan->lampiran_path; // Ambil path lama
+        $path = $penjualan->lampiran_path;
         if ($request->hasFile('lampiran')) {
             // TODO: Hapus file lama jika perlu
             $path = $request->file('lampiran')->store('lampiran_penjualan', 'public');
         }
 
-        // 3. Hitung Grand Total baru
-        $grandTotal = 0;
+        $subTotal = 0;
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
             $price = $request->harga_satuan[$index] ?? 0;
             $discount = $request->diskon[$index] ?? 0;
-            $grandTotal += ($quantity * $price) * (1 - ($discount / 100));
+            $subTotal += ($quantity * $price) * (1 - ($discount / 100));
         }
         $pajakPersen = $request->tax_percentage ?? 0;
-        $jumlahPajak = $grandTotal * ($pajakPersen / 100);
-        $grandTotal += $jumlahPajak;
+        $jumlahPajak = $subTotal * ($pajakPersen / 100);
+        $grandTotal = $subTotal + $jumlahPajak;
 
         DB::beginTransaction();
         try {
-            // 4. Update Data Induk (Penjualan)
             $penjualan->update([
-                'status' => 'Pending', // Kembalikan status ke Pending
+                'status' => 'Pending',
                 'pelanggan' => $request->pelanggan,
                 'email' => $request->email,
                 'alamat_penagihan' => $request->alamat_penagihan,
@@ -242,10 +239,8 @@ class PenjualanController extends Controller
                 'grand_total' => $grandTotal,
             ]);
 
-            // 5. Hapus semua rincian item LAMA
             $penjualan->items()->delete();
 
-            // 6. Buat ulang rincian item BARU
             foreach ($request->produk_id as $index => $produkId) {
                 $quantity = $request->kuantitas[$index] ?? 0;
                 $price = $request->harga_satuan[$index] ?? 0;
@@ -280,6 +275,10 @@ class PenjualanController extends Controller
         if (auth()->user()->role != 'admin' && $penjualan->user_id != auth()->id()) {
              return redirect()->route('penjualan.index')->with('error', 'Akses ditolak.');
         }
+        if ($penjualan->status != 'Pending' && auth()->user()->role != 'admin') {
+            return redirect()->route('penjualan.index')->with('error', 'Data yang sudah diproses tidak bisa dihapus.');
+         }
+        
         $penjualan->delete();
         return redirect()->route('penjualan.index')->with('success', 'Data penjualan berhasil dihapus.');
     }
@@ -306,7 +305,7 @@ class PenjualanController extends Controller
                 if (!$stok || $stok->stok < $item->kuantitas) {
                     DB::rollBack();
                     $namaProduk = $item->produk->nama_produk ?? 'ID: ' . $item->produk_id;
-                    return redirect()->route('penjualan.index')->with('error', "Stok tidak cukup di gudang: $namaProduk. Transaksi dibatalkan.");
+                    return redirect()->route('penjualan.index')->with('error', "Stok tidak cukup di gudang terkait untuk produk: $namaProduk. Transaksi dibatalkan.");
                 }
                 $stok->decrement('stok', $item->kuantitas);
             }

@@ -6,7 +6,7 @@ use App\Pembelian;
 use App\PembelianItem;
 use App\Produk;
 use App\Gudang;
-use App\Kontak; // <-- Pastikan ini ada
+use App\Kontak;
 use App\GudangProduk;
 use App\User;
 use Illuminate\Http\Request;
@@ -149,41 +149,33 @@ class PembelianController extends Controller
     }
 
     /**
-     * ======================================================
-     * FUNGSI EDIT YANG DIPERBARUI
-     * ======================================================
-     * Menampilkan form edit dengan data induk DAN rincian.
+     * Menampilkan form edit.
      */
     public function edit(Pembelian $pembelian)
     {
-        if (Auth::user()->role != 'admin' && $pembelian->user_id != Auth::id()) {
-             return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
+        // Hanya Admin yang bisa edit
+        if (Auth::user()->role != 'admin') {
+             return redirect()->route('pembelian.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
-        if ($pembelian->status != 'Pending' && Auth::user()->role != 'admin') {
-            return redirect()->route('pembelian.index')->with('error', 'Data yang sudah diproses tidak bisa diedit.');
-         }
 
         $produks = Produk::all();
         $gudangs = Gudang::all();
         $kontaks = Kontak::all();
-        $pembelian->load('items'); // Muat rincian item
+        $pembelian->load('items');
         
         return view('pembelian.edit', compact('pembelian', 'produks', 'gudangs', 'kontaks'));
     }
 
     /**
-     * ======================================================
-     * FUNGSI UPDATE YANG DIPERBARUI
-     * ======================================================
-     * Mengupdate data induk DAN rincian.
+     * Mengupdate data di database.
      */
     public function update(Request $request, Pembelian $pembelian)
     {
-        if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
-             return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
+        // Hanya Admin yang bisa update
+        if (auth()->user()->role != 'admin') {
+             return redirect()->route('pembelian.index')->with('error', 'Hanya Admin yang dapat mengedit data.');
         }
         
-        // 1. Validasi (Sama persis seperti store)
         $request->validate([
             'staf_penyetuju' => 'required|string|max:255',
             'tgl_transaksi' => 'required|date',
@@ -197,14 +189,12 @@ class PembelianController extends Controller
             'harga_satuan.*' => 'required|numeric|min:0',
         ]);
         
-        // 2. Proses upload file (jika ada file baru)
         $path = $pembelian->lampiran_path;
         if ($request->hasFile('lampiran')) {
-            // TODO: Hapus file lama jika perlu
+            // TODO: Hapus file lama
             $path = $request->file('lampiran')->store('lampiran_pembelian', 'public');
         }
 
-        // 3. Hitung Grand Total baru
         $subTotal = 0;
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
@@ -218,9 +208,8 @@ class PembelianController extends Controller
 
         DB::beginTransaction();
         try {
-            // 4. Update Data Induk (Pembelian)
             $pembelian->update([
-                'status' => 'Pending', // Set status kembali ke Pending
+                'status' => 'Pending',
                 'gudang_id' => $request->gudang_id,
                 'staf_penyetuju' => $request->staf_penyetuju,
                 'email_penyetuju' => $request->email_penyetuju,
@@ -235,10 +224,8 @@ class PembelianController extends Controller
                 'grand_total' => $grandTotal,
             ]);
 
-            // 5. Hapus semua rincian item LAMA
             $pembelian->items()->delete();
 
-            // 6. Buat ulang rincian item BARU
             foreach ($request->produk_id as $index => $produkId) {
                 $quantity = $request->kuantitas[$index] ?? 0;
                 $price = $request->harga_satuan[$index] ?? 0;
@@ -273,6 +260,9 @@ class PembelianController extends Controller
         if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
              return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
+         if ($pembelian->status != 'Pending' && auth()->user()->role != 'admin') {
+            return redirect()->route('pembelian.index')->with('error', 'Data yang sudah diproses tidak bisa dihapus.');
+         }
         
         $pembelian->delete();
         return redirect()->route('pembelian.index')->with('success', 'Data pembelian berhasil dihapus.');

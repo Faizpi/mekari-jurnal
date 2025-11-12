@@ -30,7 +30,6 @@
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             Faktur Belum Dibayar</div>
-                        {{-- (Nilai ini dihitung dari grand_total di controller) --}}
                         <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($fakturBelumDibayar, 0, ',', '.') }}</div>
                     </div>
                     <div class="col-auto">
@@ -71,7 +70,7 @@
                         <th>Nomor</th>
                         <th>Pembuat</th>
                         <th>Staf Penyetuju</th>
-                        <th>Urgensi</th>
+                        <th>Gudang</th>
                         <th class="text-right">Grand Total</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Aksi</th>
@@ -80,7 +79,7 @@
                 <tbody>
                     @forelse ($pembelians as $item)
                     <tr>
-                        <td>{{ \Carbon\Carbon::parse($item->tgl_transaksi)->format('d/m/Y') }}</td>
+                        <td>{{ $item->tgl_transaksi->format('d/m/Y') }}</td>
                         <td>
                             <a href="{{ route('pembelian.show', $item->id) }}">
                                 <strong>PR-{{ $item->id }}</strong>
@@ -88,7 +87,7 @@
                         </td>
                         <td>{{ $item->user->name }}</td>
                         <td>{{ $item->staf_penyetuju }}</td>
-                        <td>{{ $item->urgensi }}</td>
+                        <td>{{ $item->gudang->nama_gudang ?? 'N/A' }}</td>
                         <td class="text-right font-weight-bold">Rp {{ number_format($item->grand_total, 0, ',', '.') }}</td>
                         <td class="text-center">
                              @if($item->status == 'Approved')
@@ -100,17 +99,11 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
-                                <a href="{{ route('pembelian.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm">
+                            @if(auth()->user()->role == 'admin')
+                                <a href="{{ route('pembelian.edit', $item->id) }}" class="btn btn-warning btn-circle btn-sm" title="Edit">
                                     <i class="fas fa-pen"></i>
                                 </a>
-                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
-                                        data-toggle="modal" 
-                                        data-target="#deleteModal" 
-                                        data-action="{{ route('pembelian.destroy', $item->id) }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                @if(auth()->user()->role == 'admin' && $item->status == 'Pending')
+                                @if($item->status == 'Pending')
                                     <form action="{{ route('pembelian.approve', $item->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Setujui">
@@ -118,7 +111,16 @@
                                         </button>
                                     </form>
                                 @endif
-                            @else
+                            @endif
+
+                            @if(auth()->user()->role == 'admin' || $item->status == 'Pending')
+                                <button type="button" class="btn btn-danger btn-circle btn-sm" 
+                                        data-toggle="modal" data-target="#deleteModal" data-action="{{ route('pembelian.destroy', $item->id) }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            @endif
+
+                            @if(auth()->user()->role != 'admin' && $item->status != 'Pending')
                                 <span class="text-muted small">Terkunci</span>
                             @endif
                         </td>
@@ -155,7 +157,7 @@
 @push('scripts')
 <script>
     $('#deleteModal').on('show.bs.modal', function (event) {
-        var button = $(event->relatedTarget); 
+        var button = $(event.relatedTarget); 
         var action = button.data('action'); 
         var modal = $(this);
         modal.find('#deleteForm').attr('action', action);
