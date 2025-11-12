@@ -4,9 +4,15 @@
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    
+    {{-- HANYA ADMIN YANG BISA MELIHAT FORM EXPORT --}}
     @if(auth()->user()->role == 'admin')
-        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
-                class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+        <div>
+            {{-- Tombol ini akan memicu Modal --}}
+            <button type.button" class="btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#exportModal">
+                <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
+            </button>
+        </div>
     @endif
 </div>
 
@@ -156,6 +162,40 @@
             </div>
         </div>
     @endif
+</div>
+
+{{-- LETAKKAN DI PALING BAWAH FILE dashboard.blade.php --}}
+
+<div class="modal fade" id="exportModal" tabindex="-1" role="dialog" aria-labelledby="exportModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">Export Laporan Transaksi</h5>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            {{-- Form ini mengarah ke rute 'report.export' yang akan kita buat --}}
+            <form action="{{ route('report.export') }}" method="GET">
+                <div class="modal-body">
+                    <p>Pilih rentang tanggal untuk data yang ingin Anda export.</p>
+                    <div class="form-group">
+                        <label for="date_from">Dari Tanggal</label>
+                        <input type="date" class="form-control" name="date_from" id="date_from" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="date_to">Sampai Tanggal</label>
+                        <input type="date" class="form-control" name="date_to" id="date_to" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Export ke Excel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection
 

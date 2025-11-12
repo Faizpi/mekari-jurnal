@@ -8,6 +8,7 @@ use App\Http\Controllers\PembelianController;
 use App\Http\Controllers\GudangController;    // <-- TAMBAHKAN INI
 use App\Http\Controllers\ProdukController;     // <-- TAMBAHKAN INI
 use App\Http\Controllers\StokController;       // <-- TAMBAHKAN INI
+use App\Http\Controllers\DashboardController; // <-- TAMBAHKAN INI
 
 /*
 |--------------------------------------------------------------------------
@@ -73,6 +74,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('stok', [StokController::class, 'index'])->name('stok.index');
         Route::post('stok', [StokController::class, 'store'])->name('stok.store');
         Route::resource('kontak', 'KontakController');
+        Route::get('/report/export', [DashboardController::class, 'export'])->name('report.export');
 
         Route::post('penjualan/{penjualan}/markaspaid', [PenjualanController::class, 'markAsPaid'])->name('penjualan.markAsPaid');
     });

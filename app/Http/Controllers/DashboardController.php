@@ -9,6 +9,8 @@ use App\Biaya;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\TransactionsExport;
 
 class DashboardController extends Controller
 {
@@ -103,5 +105,51 @@ class DashboardController extends Controller
 
         // Kirim semua data ke view
         return view('dashboard', $data);
+    }
+
+    public function export(Request $request)
+    {
+        // 1. Validasi input tanggal
+        $request->validate([
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+        ]);
+
+        $dateFrom = $request->date_from;
+        $dateTo = $request->date_to;
+
+        // 2. Ambil data dari database (logika yang sama seperti di index)
+        $penjualans = Penjualan::with('user', 'gudang')
+                        ->whereBetween('tgl_transaksi', [$dateFrom, $dateTo])
+                        ->get();
+        $pembelians = Pembelian::with('user', 'gudang')
+                        ->whereBetween('tgl_transaksi', [$dateFrom, $dateTo])
+                        ->get();
+        $biayas = Biaya::with('user')
+                        ->whereBetween('tgl_transaksi', [$dateFrom, $dateTo])
+                        ->get();
+
+        // 3. Siapkan data untuk digabung
+        $penjualans->each(function($item) { 
+            $item->type = 'Penjualan'; $item->route = route('penjualan.show', $item->id);
+            $item->number = 'INV-' . $item->id;
+        });
+        $pembelians->each(function($item) { 
+            $item->type = 'Pembelian'; $item->route = route('pembelian.show', $item->id);
+            $item->number = 'PR-' . $item->id;
+        });
+        $biayas->each(function($item) { 
+            $item->type = 'Biaya'; $item->route = route('biaya.show', $item->id);
+            $item->number = 'EXP-' . $item->id;
+        });
+
+        // 4. Gabungkan dan urutkan
+        $allTransactions = $penjualans->concat($pembelians)->concat($biayas)->sortBy('tgl_transaksi');
+
+        // 5. Buat nama file
+        $fileName = 'Laporan_Transaksi_' . $dateFrom . '_sampai_' . $dateTo . '.xlsx';
+
+        // 6. Download file Excel
+        return Excel::download(new TransactionsExport($allTransactions), $fileName);
     }
 }
