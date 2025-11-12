@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Pembelian;
 use App\PembelianItem;
 use App\Produk;
+use App\Gudang;
+use App\Kontak; // <-- TAMBAHKAN INI
 use App\GudangProduk;
 use App\User;
 use Illuminate\Http\Request;
@@ -22,28 +24,24 @@ class PembelianController extends Controller
     {
         $query = null;
         if (Auth::user()->role == 'admin') {
-            $query = Pembelian::with('user');
+            $query = Pembelian::with('user', 'gudang');
         } else {
-            $query = Pembelian::where('user_id', Auth::id())->with('user');
+            $userGudangId = Auth::user()->gudang_id;
+            $query = Pembelian::where('gudang_id', $userGudangId)->with('user', 'gudang');
         }
-
-        // Kalkulasi Kartu Ringkasan (sudah benar pakai grand_total)
-        $totalBelumDibayar = (clone $query)
-            ->whereIn('status', ['Pending', 'Approved'])
-            ->sum('grand_total');
-
-        $totalTelatDibayar = (clone $query)
-            ->where('status', 'Approved')
-            ->whereNotNull('tgl_jatuh_tempo')
-            ->where('tgl_jatuh_tempo', '<', Carbon::now())
-            ->sum('grand_total');
         
         $allPembelian = $query->latest()->get();
 
+        $fakturBelumDibayar = (clone $query)->whereIn('status', ['Pending', 'Approved'])->sum('grand_total');
+        $fakturTelatBayar = (clone $query)->where('status', 'Approved')
+                                          ->whereNotNull('tgl_jatuh_tempo')
+                                          ->where('tgl_jatuh_tempo', '<', Carbon::now())
+                                          ->sum('grand_total');
+
         return view('pembelian.index', [
             'pembelians' => $allPembelian,
-            'fakturBelumDibayar' => $totalBelumDibayar,
-            'fakturTelatBayar' => $totalTelatDibayar,
+            'fakturBelumDibayar' => $fakturBelumDibayar,
+            'fakturTelatBayar' => $fakturTelatBayar,
         ]);
     }
 
@@ -53,7 +51,9 @@ class PembelianController extends Controller
     public function create()
     {
         $produks = Produk::all();
-        return view('pembelian.create', compact('produks'));
+        $gudangs = Gudang::all();
+        $kontaks = Kontak::all(); // <-- TAMBAHKAN INI
+        return view('pembelian.create', compact('produks', 'gudangs', 'kontaks'));
     }
 
     /**
@@ -62,13 +62,13 @@ class PembelianController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'staf_penyetuju' => 'required|string|max:255',
+            'staf_penyetuju' => 'required|string|max:255', // Ini sekarang adalah NAMA dari kontak
             'tgl_transaksi' => 'required|date',
             'urgensi' => 'required|string',
+            'gudang_id' => 'required|exists:gudangs,id',
+            'tax_percentage' => 'required|numeric|min:0',
             'lampiran' => 'nullable|file|mimes:jpg,jpeg,png,pdf,zip,doc,docx|max:2048',
             
-            'tax_percentage' => 'required|numeric|min:0', // Validasi pajak persen
-
             'produk_id' => 'required|array|min:1',
             'kuantitas' => 'required|array|min:1',
             'harga_satuan' => 'required|array|min:1',
@@ -77,15 +77,13 @@ class PembelianController extends Controller
             'harga_satuan.*' => 'required|numeric|min:0',
         ]);
 
-        // 1. Proses upload file
         $path = null;
         if ($request->hasFile('lampiran')) {
             $path = $request->file('lampiran')->store('lampiran_pembelian', 'public');
         }
 
-        // 2. Hitung Subtotal dan Grand Total
         $subTotal = 0;
-        $itemsData = []; // Tampung data item
+        $itemsData = [];
 
         foreach ($request->produk_id as $index => $produkId) {
             $quantity = $request->kuantitas[$index] ?? 0;
@@ -109,10 +107,10 @@ class PembelianController extends Controller
         $jumlahPajak = $subTotal * ($pajakPersen / 100);
         $grandTotal = $subTotal + $jumlahPajak;
 
-        // 3. Buat Data Induk (Pembelian)
         $pembelianInduk = Pembelian::create([
             'user_id' => Auth::id(),
             'status' => 'Pending',
+            'gudang_id' => $request->gudang_id,
             'staf_penyetuju' => $request->staf_penyetuju,
             'email_penyetuju' => $request->email_penyetuju,
             'tgl_transaksi' => $request->tgl_transaksi,
@@ -126,9 +124,8 @@ class PembelianController extends Controller
             'grand_total' => $grandTotal,
         ]);
 
-        // 4. Looping untuk menyimpan Data Rincian (PembelianItem)
         foreach ($itemsData as $item) {
-            $item['pembelian_id'] = $pembelianInduk->id; // Hubungkan ke ID Induk
+            $item['pembelian_id'] = $pembelianInduk->id;
             PembelianItem::create($item);
         }
 
@@ -143,7 +140,7 @@ class PembelianController extends Controller
         if (auth()->user()->role != 'admin' && $pembelian->user_id != auth()->id()) {
             return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
-        $pembelian->load('items', 'user', 'items.produk');
+        $pembelian->load('items', 'user', 'gudang', 'items.produk');
         return view('pembelian.show', compact('pembelian'));
     }
 
@@ -156,8 +153,10 @@ class PembelianController extends Controller
              return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
         $produks = Produk::all();
+        $gudangs = Gudang::all();
+        $kontaks = Kontak::all(); // <-- Tambahkan ini
         $pembelian->load('items');
-        return view('pembelian.edit', compact('pembelian', 'produks'));
+        return view('pembelian.edit', compact('pembelian', 'produks', 'gudangs', 'kontaks'));
     }
 
     /**
@@ -174,6 +173,8 @@ class PembelianController extends Controller
             'tgl_transaksi' => 'required|date',
             'urgensi' => 'required|string',
             'status' => 'required|string',
+            'gudang_id' => 'required|exists:gudangs,id',
+            // TODO: Tambahkan validasi update untuk item dan pajak
         ]);
 
         $pembelian->update($request->all());
@@ -203,9 +204,9 @@ class PembelianController extends Controller
              return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
 
-        $userGudang = $pembelian->user->gudang_id;
-        if (!$userGudang) {
-            return redirect()->route('pembelian.index')->with('error', 'Gagal! User pembuat tidak terhubung ke gudang manapun.');
+        $gudangId = $pembelian->gudang_id; 
+        if (!$gudangId) {
+            return redirect()->route('pembelian.index')->with('error', 'Gagal! Transaksi ini tidak terhubung ke gudang manapun.');
         }
 
         DB::beginTransaction();
@@ -213,7 +214,7 @@ class PembelianController extends Controller
             foreach ($pembelian->items as $item) {
                 $stok = GudangProduk::firstOrCreate(
                     [
-                        'gudang_id' => $userGudang,
+                        'gudang_id' => $gudangId,
                         'produk_id' => $item->produk_id
                     ],
                     ['stok' => 0]
@@ -242,7 +243,7 @@ class PembelianController extends Controller
             return redirect()->route('pembelian.index')->with('error', 'Akses ditolak.');
         }
 
-        $pembelian->load('items', 'user', 'items.produk');
+        $pembelian->load('items', 'user', 'gudang', 'items.produk');
         return view('pembelian.print', compact('pembelian'));
     }
 }

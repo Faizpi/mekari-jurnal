@@ -18,21 +18,32 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="pelanggan">Pelanggan *</label>
-                                    <input type="text" class="form-control @error('pelanggan') is-invalid @enderror" id="pelanggan" name="pelanggan" value="{{ old('pelanggan') }}" required>
+                                    <select class="form-control @error('pelanggan') is-invalid @enderror" id="kontak-select" name="pelanggan" required>
+                                        <option value="">Pilih kontak...</option>
+                                        @foreach($kontaks as $kontak)
+                                            <option value="{{ $kontak->nama }}"
+                                                    data-email="{{ $kontak->email }}"
+                                                    data-alamat="{{ $kontak->alamat }}"
+                                                    data-diskon="{{ $kontak->diskon_persen }}"
+                                                    {{ old('pelanggan') == $kontak->nama ? 'selected' : '' }}>
+                                                {{ $kontak->nama }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                     @error('pelanggan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="email">Email</label>
-                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}">
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email-input" name="email" value="{{ old('email') }}">
                                     @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="alamat_penagihan">Alamat Penagihan</label>
-                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
+                            <textarea class="form-control @error('alamat_penagihan') is-invalid @enderror" id="alamat-input" name="alamat_penagihan" rows="2">{{ old('alamat_penagihan') }}</textarea>
                             @error('alamat_penagihan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="row">
@@ -51,9 +62,19 @@
                                 </div>
                             </div>
                              <div class="col-md-4">
+                                {{-- =================================== --}}
+                                {{-- PERUBAHAN: SYARAT PEMBAYARAN --}}
+                                {{-- =================================== --}}
                                 <div class="form-group">
                                     <label for="syarat_pembayaran">Syarat Pembayaran</label>
-                                    <input type="text" class="form-control @error('syarat_pembayaran') is-invalid @enderror" id="syarat_pembayaran" name="syarat_pembayaran" value="{{ old('syarat_pembayaran') }}">
+                                    <select class="form-control @error('syarat_pembayaran') is-invalid @enderror" id="syarat_pembayaran" name="syarat_pembayaran">
+                                        <option value="Cash" {{ old('syarat_pembayaran') == 'Cash' ? 'selected' : '' }}>Cash</option>
+                                        <option value="Net 7" {{ old('syarat_pembayaran') == 'Net 7' ? 'selected' : '' }}>Net 7</option>
+                                        <option value="Net 14" {{ old('syarat_pembayaran') == 'Net 14' ? 'selected' : '' }}>Net 14</option>
+                                        <option value="Net 20" {{ old('syarat_pembayaran') == 'Net 20' ? 'selected' : '' }}>Net 20</option>
+                                        <option value="Net 30" {{ old('syarat_pembayaran') == 'Net 30' ? 'selected' : '' }}>Net 30</option>
+                                        <option value="Net 60" {{ old('syarat_pembayaran') == 'Net 60' ? 'selected' : '' }}>Net 60</option>
+                                    </select>
                                     @error('syarat_pembayaran') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
@@ -75,14 +96,26 @@
                             @error('tag') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="form-group">
-                            <label for="gudang">Gudang</label>
-                            <input type="text" class="form-control @error('gudang') is-invalid @enderror" id="gudang" name="gudang" value="{{ old('gudang', auth()->user()->gudang->nama_gudang ?? 'Tidak ada gudang') }}" readonly>
-                            @error('gudang') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            <label for="gudang_id">Gudang *</label>
+                            @if(auth()->user()->role == 'admin')
+                                <select class="form-control @error('gudang_id') is-invalid @enderror" id="gudang_id" name="gudang_id" required>
+                                    <option value="">Pilih gudang...</option>
+                                    @foreach($gudangs as $gudang)
+                                        <option value="{{ $gudang->id }}" {{ old('gudang_id') == $gudang->id ? 'selected' : '' }}>
+                                            {{ $gudang->nama_gudang }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <input type="text" class="form-control" value="{{ auth()->user()->gudang->nama_gudang ?? 'User tidak terhubung ke gudang' }}" readonly>
+                                <input type="hidden" name="gudang_id" value="{{ auth()->user()->gudang_id }}">
+                            @endif
+                            @error('gudang_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>
                 </div>
 
-                {{-- TABEL PRODUK/JASA (Tidak ada kolom Pajak) --}}
+                {{-- TABEL PRODUK/JASA --}}
                 <div class="table-responsive mt-3">
                     <table class="table table-bordered">
                         <thead class="thead-light">
@@ -116,7 +149,15 @@
                                         </td>
                                         <td><input type="text" class="form-control product-description" name="deskripsi[]" value="{{ old('deskripsi.'.$index) }}"></td>
                                         <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="{{ old('kuantitas.'.$index) }}" min="1" required></td>
-                                        <td><input type="text" class="form-control" name="unit[]" value="{{ old('unit.'.$index) }}"></td>
+                                        {{-- =================================== --}}
+                                        {{-- PERUBAHAN: UNIT --}}
+                                        {{-- =================================== --}}
+                                        <td>
+                                            <select class="form-control" name="unit[]">
+                                                <option value="Pcs" {{ old('unit.'.$index) == 'Pcs' ? 'selected' : '' }}>Pcs</option>
+                                                <option value="Karton" {{ old('unit.'.$index) == 'Karton' ? 'selected' : '' }}>Karton</option>
+                                            </select>
+                                        </td>
                                         <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" value="{{ old('harga_satuan.'.$index) }}" placeholder="0" required></td>
                                         <td><input type="number" class="form-control text-right product-discount" name="diskon[]" value="{{ old('diskon.'.$index) }}" placeholder="0" min="0" max="100"></td>
                                         <td><input type="text" class="form-control text-right product-line-total" name="jumlah[]" placeholder="0" readonly></td>
@@ -124,6 +165,7 @@
                                     </tr>
                                 @endforeach
                             @else
+                                {{-- Baris default --}}
                                 <tr>
                                     <td>
                                         <select class="form-control product-select @error('produk_id.0') is-invalid @enderror" name="produk_id[]" required>
@@ -137,7 +179,15 @@
                                     </td>
                                     <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
                                     <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
-                                    <td><input type="text" class="form-control" name="unit[]"></td>
+                                    {{-- =================================== --}}
+                                    {{-- PERUBAHAN: UNIT --}}
+                                    {{-- =================================== --}}
+                                    <td>
+                                        <select class="form-control" name="unit[]">
+                                            <option value="Pcs">Pcs</option>
+                                            <option value="Karton">Karton</option>
+                                        </select>
+                                    </td>
                                     <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0" required></td>
                                     <td><input type="number" class="form-control text-right product-discount" name="diskon[]" placeholder="0" min="0" max="100"></td>
                                     <td><input type="text" class="form-control text-right product-line-total" name="jumlah[]" placeholder="0" readonly></td>
@@ -148,6 +198,7 @@
                     </table>
                 </div>
                 <button type="button" class="btn btn-link pl-0" id="add-product-row">+ Tambah Data</button>
+
                 @error('produk_id.*') <div class="text-danger small mt-2">Error di baris Produk: {{ $message }}</div> @enderror
                 @error('kuantitas.*') <div class="text-danger small mt-2">Error di baris Kuantitas: {{ $message }}</div> @enderror
                 @error('harga_satuan.*') <div class="text-danger small mt-2">Error di baris Harga: {{ $message }}</div> @enderror
@@ -170,9 +221,6 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        {{-- =================================== --}}
-                        {{-- TABEL TOTAL (DENGAN INPUT PAJAK MANUAL %) --}}
-                        {{-- =================================== --}}
                         <table class="table table-borderless text-right">
                             <tbody>
                                 <tr>
@@ -220,7 +268,23 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.getElementById('product-table-body');
     const addRowBtn = document.getElementById('add-product-row');
-    const taxInput = document.getElementById('tax_percentage_input'); // <-- Input Pajak
+    const taxInput = document.getElementById('tax_percentage_input');
+    const kontakSelect = document.getElementById('kontak-select');
+    const emailInput = document.getElementById('email-input');
+    const alamatInput = document.getElementById('alamat-input');
+
+    kontakSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        emailInput.value = selectedOption.dataset.email || '';
+        alamatInput.value = selectedOption.dataset.alamat || '';
+        tableBody.querySelectorAll('tr').forEach(row => {
+            const diskonInput = row.querySelector('.product-discount');
+            if (diskonInput) {
+                diskonInput.value = selectedOption.dataset.diskon || 0;
+                calculateRow(row);
+            }
+        });
+    });
 
     const productDropdownHtml = `
         <select class="form-control product-select" name="produk_id[]" required>
@@ -250,11 +314,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const lineTotal = parseFloat(row.querySelector('.product-line-total').value) || 0;
             subtotal += lineTotal;
         });
-
         let taxPercentage = parseFloat(taxInput.value) || 0;
         let taxAmount = subtotal * (taxPercentage / 100);
         const total = subtotal + taxAmount;
-        
         document.getElementById('subtotal-display').innerText = formatRupiah(subtotal);
         document.getElementById('tax-amount-display').innerText = formatRupiah(taxAmount);
         document.getElementById('total-display').innerHTML = `<strong>${formatRupiah(total)}</strong>`;
@@ -270,6 +332,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const deskripsi = selectedOption.dataset.deskripsi || '';
         row.querySelector('.product-price').value = harga;
         row.querySelector('.product-description').value = deskripsi;
+        const kontakOption = kontakSelect.options[kontakSelect.selectedIndex];
+        if (kontakOption) {
+            row.querySelector('.product-discount').value = kontakOption.dataset.diskon || 0;
+        }
         calculateRow(row);
     };
 
@@ -279,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    taxInput.addEventListener('input', calculateGrandTotal); // <-- Hitung ulang jika pajak berubah
+    taxInput.addEventListener('input', calculateGrandTotal);
     tableBody.addEventListener('change', handleProductChange);
 
     addRowBtn.addEventListener('click', function () {
@@ -288,12 +354,25 @@ document.addEventListener('DOMContentLoaded', function () {
             <td>${productDropdownHtml}</td>
             <td><input type="text" class="form-control product-description" name="deskripsi[]"></td>
             <td><input type="number" class="form-control product-quantity" name="kuantitas[]" value="1" min="1"></td>
-            <td><input type="text" class="form-control" name="unit[]"></td>
+            {{-- =================================== --}}
+            {{-- PERUBAHAN: UNIT (di JS) --}}
+            {{-- =================================== --}}
+            <td>
+                <select class="form-control" name="unit[]">
+                    <option value="Pcs">Pcs</option>
+                    <option value="Karton">Karton</option>
+                </select>
+            </td>
             <td><input type="number" class="form-control text-right product-price" name="harga_satuan[]" placeholder="0" required></td>
             <td><input type="number" class="form-control text-right product-discount" name="diskon[]" placeholder="0" min="0" max="100"></td>
             <td><input type="text" class="form-control text-right product-line-total" name="jumlah[]" placeholder="0" readonly></td>
             <td><button type="button" class="btn btn-danger btn-sm remove-row-btn">X</button></td>
         `;
+        const kontakOption = kontakSelect.options[kontakSelect.selectedIndex];
+        const diskonInput = newRow.querySelector('.product-discount');
+        if (diskonInput && kontakOption) {
+            diskonInput.value = kontakOption.dataset.diskon || 0;
+        }
     });
 
     tableBody.addEventListener('click', function (event) {

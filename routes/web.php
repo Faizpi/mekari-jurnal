@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('produk', 'ProdukController');
         Route::get('stok', [StokController::class, 'index'])->name('stok.index');
         Route::post('stok', [StokController::class, 'store'])->name('stok.store');
+        Route::resource('kontak', 'KontakController');
 
         Route::post('penjualan/{penjualan}/markaspaid', [PenjualanController::class, 'markAsPaid'])->name('penjualan.markAsPaid');
     });

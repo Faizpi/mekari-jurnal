@@ -17,7 +17,7 @@ class Penjualan extends Model
         'syarat_pembayaran',
         'no_referensi',
         'tag',
-        'gudang',
+        'gudang_id',
         'memo',
         'lampiran_path',
         'status',
@@ -44,5 +44,10 @@ class Penjualan extends Model
     public function items()
     {
         return $this->hasMany(PenjualanItem::class);
+    }
+
+    public function gudang()
+    {
+        return $this->belongsTo(Gudang::class);
     }
 }

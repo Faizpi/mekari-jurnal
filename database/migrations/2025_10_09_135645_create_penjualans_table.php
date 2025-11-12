@@ -29,7 +29,8 @@ public function up()
             $table->string('syarat_pembayaran')->nullable();
             $table->string('no_referensi')->nullable();
             $table->string('tag')->nullable();
-            $table->string('gudang')->nullable();
+            $table->unsignedBigInteger('gudang_id');
+            $table->foreign('gudang_id')->references('id')->on('gudangs');
             $table->text('memo')->nullable();
             $table->string('lampiran_path')->nullable();
             

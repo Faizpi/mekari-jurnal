@@ -16,6 +16,7 @@ class Pembelian extends Model
         'urgensi',
         'tahun_anggaran',
         'tag',
+        'gudang_id',
         'memo',
         'lampiran_path',
         'status',
@@ -43,5 +44,10 @@ class Pembelian extends Model
     public function items()
     {
         return $this->hasMany(PembelianItem::class);
+    }
+
+    public function gudang()
+    {
+        return $this->belongsTo(Gudang::class);
     }
 }

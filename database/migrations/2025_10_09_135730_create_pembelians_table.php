@@ -25,7 +25,8 @@ public function up()
             $table->date('tgl_jatuh_tempo')->nullable();
             $table->string('urgensi');
             $table->string('tahun_anggaran')->nullable();
-            $table->string('tag')->nullable();
+            $table->unsignedBigInteger('gudang_id');
+            $table->foreign('gudang_id')->references('id')->on('gudangs');
             $table->text('memo')->nullable();
             $table->string('lampiran_path')->nullable();
             

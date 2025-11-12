@@ -61,9 +61,9 @@
                 <div class="sidebar-heading">Admin</div>
 
                 {{-- TAMBAHKAN MENU INI --}}
-                <li class="nav-item {{ Route::is('users.*') ? 'active' : '' }}">
-                    <a class="nav-link" href="{{ route('users.index') }}">
-                        <i class="fas fa-fw fa-users-cog"></i><span>User Management</span></a>
+                <li class="nav-item {{ Route::is('kontak.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('kontak.index') }}">
+                        <i class="fas fa-fw fa-address-book"></i><span>Master Kontak</span></a>
                 </li>
 
                 <li class="nav-item {{ Route::is('gudang.*') ? 'active' : '' }}">
@@ -71,15 +71,22 @@
                         <i class="fas fa-fw fa-warehouse"></i><span>Master Gudang</span></a>
                 </li>
 
+                <li class="nav-item {{ Route::is('stok.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('stok.index') }}">
+                        <i class="fas fa-fw fa-cubes"></i><span>Master Stok</span></a>
+                </li>
+
                 <li class="nav-item {{ Route::is('produk.*') ? 'active' : '' }}">
                     <a class="nav-link" href="{{ route('produk.index') }}">
                         <i class="fas fa-fw fa-boxes"></i><span>Master Produk</span></a>
                 </li>
 
-                <li class="nav-item {{ Route::is('stok.*') ? 'active' : '' }}">
-                    <a class="nav-link" href="{{ route('stok.index') }}">
-                        <i class="fas fa-fw fa-cubes"></i><span>Master Stok</span></a>
+                <li class="nav-item {{ Route::is('users.*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('users.index') }}">
+                        <i class="fas fa-fw fa-users-cog"></i><span>User Management</span></a>
                 </li>
+
+
             @endif
 
             <hr class="sidebar-divider d-none d-md-block">
